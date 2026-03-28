@@ -1,14 +1,9 @@
 // GET /api/apps/guildai/usage
 // Returns usage/token stats (daily aggregates)
-// Access: admin or superadmin only
+// Access: admin or superadmin only (enforced by host via manifest requiredRoles)
 
 export default defineEventHandler(async (event) => {
-  const { db, userRoles } = event.context.guildora
-
-  const privileged = ['admin', 'superadmin']
-  if (!userRoles.some((r: string) => privileged.includes(r))) {
-    throw createError({ statusCode: 403, message: 'Forbidden' })
-  }
+  const { db } = event.context.guildora
 
   const entries = await db.list('usage-daily:')
 

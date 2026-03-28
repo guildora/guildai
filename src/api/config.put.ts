@@ -1,6 +1,6 @@
 // PUT /api/apps/guildai/config
 // Update app configuration
-// Access: admin or superadmin only (defense in depth)
+// Access: admin or superadmin only (enforced by host via manifest requiredRoles)
 
 import { validateActionPermissions } from '../utils/permissions'
 
@@ -19,12 +19,7 @@ async function sendBotMessage(channelId: string, message: string): Promise<void>
 }
 
 export default defineEventHandler(async (event) => {
-  const { userRoles, config, db } = event.context.guildora
-
-  const privileged = ['admin', 'superadmin']
-  if (!userRoles.some((r: string) => privileged.includes(r))) {
-    throw createError({ statusCode: 403, message: 'Forbidden' })
-  }
+  const { config, db } = event.context.guildora
 
   const body = await readBody(event)
 

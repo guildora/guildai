@@ -1,14 +1,9 @@
 // GET /api/apps/guildai/config
 // Returns current app configuration with masked API key
-// Access: admin or superadmin only (defense in depth)
+// Access: admin or superadmin only (enforced by host via manifest requiredRoles)
 
 export default defineEventHandler(async (event) => {
-  const { config, db, userRoles } = event.context.guildora
-
-  const privileged = ['admin', 'superadmin']
-  if (!userRoles.some((r: string) => privileged.includes(r))) {
-    throw createError({ statusCode: 403, message: 'Forbidden' })
-  }
+  const { config, db } = event.context.guildora
 
   // API key is stored separately in KV store
   const apiKey = (await db.get('secrets:apiKey')) || ''
