@@ -182,10 +182,15 @@ export async function executeAction(
       }
 
       case 'move_channel': {
-        const { parentId } = action.params
+        let { parentId } = action.params
         const moveResolved = await resolveChannelId(action.params.channelId, action.params.channelName)
         if ('error' in moveResolved) return { success: false, message: '', error: moveResolved.error }
-        if (!parentId) return { success: false, message: '', error: 'Missing parentId.' }
+        if (!parentId && action.params.categoryName) {
+          const catResolved = await resolveChannelId(undefined, action.params.categoryName)
+          if ('error' in catResolved) return { success: false, message: '', error: catResolved.error }
+          parentId = catResolved.id
+        }
+        if (!parentId) return { success: false, message: '', error: 'Missing parentId or categoryName.' }
         await botRequest(`/internal/guild/channels/${encodeURIComponent(moveResolved.id)}`, {
           method: 'PATCH',
           body: { parentId }
