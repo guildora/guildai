@@ -30,7 +30,6 @@ const ROLE_HIERARCHY: Record<string, string[]> = {
   temporaer: ['temporaer']
 }
 
-const SAFE_ACTIONS = ['assign_role', 'remove_role', 'create_channel', 'send_message', 'create_skill']
 
 function parseCSV(value: string | undefined | null): string[] {
   return (value || '').split(',').map(s => s.trim()).filter(Boolean)
@@ -90,11 +89,11 @@ export function resolvePermissions(config: Record<string, unknown>): ActionPermi
         actions: { hub: [], discord: [] }
       }
     } else if (allowedActionRoles.includes(role)) {
-      // Can chat AND confirm actions
+      // Can chat AND confirm actions — same actions on both platforms
       result[role] = {
         actions: {
           hub: enabledActions,
-          discord: enabledActions.filter(a => SAFE_ACTIONS.includes(a))
+          discord: enabledActions
         }
       }
     } else {
@@ -138,7 +137,7 @@ export function getAllowedActions(
   platform: Platform,
   enabledActions: string[]
 ): string[] {
-  if (userRoles.includes('superadmin')) return expandWildcard(['*'], enabledActions)
+  if (userRoles.includes('superadmin')) return expandWildcard(['*'])
 
   const highest = getHighestRole(userRoles)
   if (!highest) return []
@@ -157,7 +156,7 @@ export function getAllowedActions(
     }
   }
 
-  return expandWildcard([...actionSet], enabledActions)
+  return expandWildcard([...actionSet])
 }
 
 /**
@@ -175,13 +174,14 @@ export function canExecuteAction(
 }
 
 /**
- * Expand wildcard "*" to all enabled actions.
+ * Expand wildcard "*" to all known actions.
+ * The permissions matrix is the source of truth — no additional filtering.
  */
-function expandWildcard(actions: string[], enabledActions: string[]): string[] {
+function expandWildcard(actions: string[]): string[] {
   if (actions.includes('*')) {
-    return enabledActions
+    return Object.keys(ACTION_TYPES)
   }
-  return actions.filter(a => enabledActions.includes(a))
+  return actions
 }
 
 /**
@@ -194,8 +194,8 @@ export function getDefaultPermissions(): ActionPermissions {
     moderator: { actions: { hub: [], discord: [] } },
     admin: {
       actions: {
-        hub: ['assign_role', 'remove_role', 'kick_user', 'ban_user', 'create_channel', 'delete_channel', 'move_channel', 'send_message', 'delete_message', 'create_skill'],
-        discord: ['assign_role', 'remove_role', 'create_channel', 'send_message', 'create_skill']
+        hub: ['assign_role', 'remove_role', 'kick_user', 'ban_user', 'create_channel', 'rename_channel', 'move_channel', 'delete_channel', 'send_message', 'delete_message', 'create_skill'],
+        discord: ['assign_role', 'remove_role', 'create_channel', 'rename_channel', 'move_channel', 'send_message', 'delete_message', 'create_skill']
       }
     },
     superadmin: { actions: { hub: ['*'], discord: ['*'] } }

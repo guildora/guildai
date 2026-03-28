@@ -33,8 +33,8 @@ export const ACTION_TYPES: Record<string, ActionDefinition> = {
     description: 'Rename a Discord channel (use channelName or channelId)'
   },
   move_channel: {
-    params: ['channelName', 'parentId'],
-    description: 'Move a channel to a category (use channelName or channelId)'
+    params: ['channelName', 'categoryName'],
+    description: 'Move a channel to a category (use plain channel/category names, Unicode is auto-normalized)'
   },
   send_message: {
     params: ['channelName', 'content'],
