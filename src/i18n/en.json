@@ -1,0 +1,229 @@
+{
+  "nav": {
+    "chat": "Chat",
+    "history": "History",
+    "actionlog": "Audit Log",
+    "usage": "Usage",
+    "settings": "Settings",
+    "skills": "Skills"
+  },
+  "chat": {
+    "title": "GuildAI Chat",
+    "subtitle": "AI-powered Discord server administration assistant.",
+    "inputPlaceholder": "Type a message...",
+    "send": "Send",
+    "streaming": "Thinking...",
+    "actionProposed": "Action proposed",
+    "confirmAction": "Confirm",
+    "executing": "Executing...",
+    "rejectAction": "Reject",
+    "actionConfirmed": "Action confirmed and executed.",
+    "actionRejected": "Action rejected.",
+    "actionExpired": "Action expired (timeout).",
+    "actionSimulated": "Action simulated (read-only mode).",
+    "readOnlyWarning": "Read-only mode is active. Actions will be simulated but not executed.",
+    "rateLimited": "Rate limit exceeded. Please wait {seconds} seconds.",
+    "noApiKey": "No API key configured. Ask an admin to set one in Settings.",
+    "confirmationCountdown": "{seconds}s remaining",
+    "newConversation": "New conversation",
+    "actionParams": "Parameters"
+  },
+  "history": {
+    "title": "Chat History",
+    "subtitle": "View and manage past conversations.",
+    "empty": "No conversations yet.",
+    "deleteAll": "Delete All",
+    "deleteConfirmTitle": "Delete Conversation",
+    "deleteConfirmTitleAll": "Delete All Conversations",
+    "deleteConfirm": "Are you sure? This cannot be undone.",
+    "deleted": "Conversation deleted.",
+    "allDeleted": "All conversations deleted.",
+    "messages": "{count} messages",
+    "lastActive": "Last active",
+    "delete": "Delete",
+    "open": "Open"
+  },
+  "skills": {
+    "title": "Skill Library",
+    "subtitle": "Create and manage custom skills for the AI assistant.",
+    "empty": "No skills created yet.",
+    "add": "Add Skill",
+    "edit": "Edit",
+    "delete": "Delete",
+    "deleteConfirmTitle": "Delete Skill",
+    "deleteConfirm": "Are you sure you want to delete this skill? This cannot be undone.",
+    "deleted": "Skill deleted.",
+    "created": "Skill created.",
+    "updated": "Skill updated.",
+    "saveError": "Failed to save skill.",
+    "deleteError": "Failed to delete skill.",
+    "name": "Name",
+    "namePlaceholder": "e.g. Welcome Guide",
+    "nameHint": "A descriptive name for this skill.",
+    "trigger": "Trigger",
+    "triggerPlaceholder": "e.g. welcome new member",
+    "triggerHint": "The word or phrase that activates this skill when mentioned in chat.",
+    "content": "Content",
+    "contentPlaceholder": "Skill instructions in Markdown...",
+    "contentHint": "The instructions the AI follows when this skill is triggered. Supports Markdown.",
+    "createdBy": "Created by",
+    "lastUpdated": "Last updated"
+  },
+  "settings": {
+    "title": "GuildAI Settings",
+    "subtitle": "Configure the AI assistant for your server.",
+    "save": "Save Settings",
+    "saving": "Saving...",
+    "saveSuccess": "Settings saved successfully.",
+    "saveError": "Failed to save settings.",
+    "community": {
+      "heading": "Community",
+      "botName": "Bot Name",
+      "botNamePlaceholder": "e.g. GuildAI",
+      "botNameHint": "The name the bot uses to identify itself.",
+      "name": "Community Name",
+      "namePlaceholder": "e.g. My Gaming Guild",
+      "nameHint": "The bot will use this name to identify itself as part of your community.",
+      "defaultLanguage": "Default Language",
+      "defaultLanguageHint": "The bot greets new conversations in this language. It always matches the user's language after the first message.",
+      "timezone": "Timezone",
+      "timezoneHint": "The bot uses this timezone for date and time references (e.g. Europe/Berlin, America/New_York)."
+    },
+    "provider": {
+      "heading": "AI Provider",
+      "apiProvider": "Provider",
+      "apiKey": "API Key",
+      "apiKeyIsSet": "Key is set",
+      "apiKeyHint": "Leave empty to keep the current key. Only the last 4 characters are shown.",
+      "model": "Model",
+      "modelHint": "e.g. claude-sonnet-4-20250514, gpt-4o",
+      "maxTokens": "Max Tokens per Response"
+    },
+    "access": {
+      "heading": "Access & Rate Limits",
+      "allowedChatRoles": "Allowed Chat Roles",
+      "allowedChatRolesHint": "Comma-separated (e.g. moderator,admin)",
+      "allowedActionRoles": "Allowed Action Roles",
+      "allowedActionRolesHint": "Comma-separated (e.g. admin)",
+      "rateLimitPerMinute": "Rate Limit (messages/minute)",
+      "rateLimitPerRole": "Role-specific Rate Limits",
+      "rateLimitPerRoleHint": "JSON object, e.g. {'{'}'moderator': 20, 'admin': 50{'}'}",
+      "confirmationTimeout": "Confirmation Timeout (seconds)",
+      "confirmationTimeoutHint": "How long users have to confirm an action"
+    },
+    "permissions": {
+      "heading": "Permissions",
+      "description": "Configure which actions each role can perform on each platform. Blocked roles are completely ignored. Actions are inherited from lower roles."
+    },
+    "actions": {
+      "heading": "Safety",
+      "readOnlyMode": "Read-Only Mode",
+      "readOnlyModeDesc": "Simulate actions without executing them (for testing)",
+      "loggingEnabled": "Action Logging",
+      "loggingEnabledDesc": "Log all executed actions (90-day retention)"
+    },
+    "skills": {
+      "heading": "Skill Library",
+      "description": "Manage custom skills that extend the AI assistant's capabilities.",
+      "manage": "Manage Skills",
+      "allowedSkillPageRoles": "Skill Page Access Roles",
+      "allowedSkillPageRolesHint": "Comma-separated roles that can view the Skill Library page",
+      "allowedSkillManageRoles": "Skill Management Roles",
+      "allowedSkillManageRolesHint": "Comma-separated roles that can create, edit, and delete skills",
+      "allowedSkillCreateRoles": "AI Skill Creation Roles",
+      "allowedSkillCreateRolesHint": "Comma-separated roles that can confirm AI-proposed skill creation"
+    },
+    "context": {
+      "heading": "Extended Context",
+      "label": "Custom Context",
+      "hint": "This text is provided to the AI bot as additional context in every conversation. Use it for server rules, community guidelines, or other information."
+    },
+    "personality": {
+      "heading": "Extended Personality",
+      "label": "Custom Personality",
+      "hint": "Custom personality and tone instructions for the bot. This shapes how the bot writes and communicates."
+    },
+    "gif": {
+      "heading": "GIF Integration",
+      "apiKey": "Klipy API Key",
+      "apiKeyIsSet": "Key is set",
+      "apiKeyHint": "Get a free API key at partner.klipy.com. Enables the bot to embed GIFs, stickers, and clips in conversations."
+    },
+    "channel": {
+      "heading": "Discord Chat Channel",
+      "channelId": "Channel ID",
+      "channelIdHint": "Enter the Discord channel ID where the bot should respond to messages. Leave empty to disable.",
+      "maxMessages": "Context Messages",
+      "maxMessagesHint": "Maximum number of message pairs kept in Discord chat context before summarization (default: 10).",
+      "safeActionsHint": "Safe actions (assign/remove role, create channel, send message) are executed automatically. Destructive actions (kick, ban, delete) require the GuildAI Hub."
+    },
+    "mcp": {
+      "heading": "MCP Server",
+      "token": "Authentication Token",
+      "tokenHint": "Use this token to connect external AI clients via MCP.",
+      "regenerate": "Regenerate Token",
+      "regenerating": "Regenerating...",
+      "regenerated": "Token regenerated.",
+      "noToken": "No token generated yet."
+    }
+  },
+  "permissions": {
+    "role": "Role",
+    "blocked": "Blocked",
+    "inheritedHint": "Inherited from a lower role"
+  },
+  "actions": {
+    "assign_role": "Assign Role",
+    "remove_role": "Remove Role",
+    "kick_user": "Kick User",
+    "ban_user": "Ban User",
+    "create_channel": "Create Channel",
+    "rename_channel": "Rename Channel",
+    "move_channel": "Move Channel",
+    "delete_channel": "Delete Channel",
+    "send_message": "Send Message",
+    "delete_message": "Delete Message",
+    "create_skill": "Create Skill"
+  },
+  "actionlog": {
+    "title": "Audit Log",
+    "subtitle": "View all executed actions.",
+    "empty": "No actions logged yet.",
+    "filterSource": "Source",
+    "sourceAll": "All",
+    "user": "User",
+    "success": "Success",
+    "failed": "Failed",
+    "rejected": "Rejected"
+  },
+  "usage": {
+    "title": "Token Usage",
+    "subtitle": "Overview of AI token usage over the last 30 days.",
+    "empty": "No usage data yet.",
+    "totalRequests": "Total Requests",
+    "inputTokens": "Input Tokens",
+    "outputTokens": "Output Tokens",
+    "bySource": "By Source",
+    "byModel": "By Model",
+    "daily": "Daily Overview",
+    "source": "Source",
+    "model": "Model",
+    "requests": "Requests",
+    "input": "Input",
+    "output": "Output",
+    "date": "Date"
+  },
+  "error": {
+    "load": "Failed to load data. Please refresh the page.",
+    "forbidden": "You do not have permission to perform this action.",
+    "stream": "Failed to connect to AI. Please try again.",
+    "action": "Failed to process action.",
+    "config": "Failed to load configuration.",
+    "rateLimited": "Too many requests. Please wait.",
+    "noApiKey": "AI provider not configured."
+  },
+  "loading": "Loading...",
+  "back": "Back",
+  "save": "Save",
+  "cancel": "Cancel"
+}

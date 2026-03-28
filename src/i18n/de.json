@@ -1,0 +1,229 @@
+{
+  "nav": {
+    "chat": "Chat",
+    "history": "Verlauf",
+    "actionlog": "Audit Log",
+    "usage": "Nutzung",
+    "settings": "Einstellungen",
+    "skills": "Skills"
+  },
+  "chat": {
+    "title": "GuildAI Chat",
+    "subtitle": "KI-gesteuerter Discord-Server-Administrations-Assistent.",
+    "inputPlaceholder": "Nachricht eingeben...",
+    "send": "Senden",
+    "streaming": "Denkt nach...",
+    "actionProposed": "Aktion vorgeschlagen",
+    "confirmAction": "Bestätigen",
+    "executing": "Wird ausgeführt...",
+    "rejectAction": "Ablehnen",
+    "actionConfirmed": "Aktion bestätigt und ausgeführt.",
+    "actionRejected": "Aktion abgelehnt.",
+    "actionExpired": "Aktion abgelaufen (Zeitüberschreitung).",
+    "actionSimulated": "Aktion simuliert (Nur-Lesen-Modus).",
+    "readOnlyWarning": "Nur-Lesen-Modus ist aktiv. Aktionen werden simuliert, aber nicht ausgeführt.",
+    "rateLimited": "Rate-Limit erreicht. Bitte warte {seconds} Sekunden.",
+    "noApiKey": "Kein API-Schlüssel konfiguriert. Bitte einen Admin bitten, einen in den Einstellungen zu setzen.",
+    "confirmationCountdown": "{seconds}s verbleibend",
+    "newConversation": "Neues Gespräch",
+    "actionParams": "Parameter"
+  },
+  "history": {
+    "title": "Chat-Verlauf",
+    "subtitle": "Vergangene Gespräche ansehen und verwalten.",
+    "empty": "Noch keine Gespräche.",
+    "deleteAll": "Alle löschen",
+    "deleteConfirmTitle": "Gespräch löschen",
+    "deleteConfirmTitleAll": "Alle Gespräche löschen",
+    "deleteConfirm": "Bist du sicher? Dies kann nicht rückgängig gemacht werden.",
+    "deleted": "Gespräch gelöscht.",
+    "allDeleted": "Alle Gespräche gelöscht.",
+    "messages": "{count} Nachrichten",
+    "lastActive": "Zuletzt aktiv",
+    "delete": "Löschen",
+    "open": "Öffnen"
+  },
+  "skills": {
+    "title": "Skill-Bibliothek",
+    "subtitle": "Erstelle und verwalte eigene Skills f\u00fcr den KI-Assistenten.",
+    "empty": "Noch keine Skills erstellt.",
+    "add": "Skill hinzuf\u00fcgen",
+    "edit": "Bearbeiten",
+    "delete": "L\u00f6schen",
+    "deleteConfirmTitle": "Skill l\u00f6schen",
+    "deleteConfirm": "Bist du sicher? Dies kann nicht r\u00fcckg\u00e4ngig gemacht werden.",
+    "deleted": "Skill gel\u00f6scht.",
+    "created": "Skill erstellt.",
+    "updated": "Skill aktualisiert.",
+    "saveError": "Skill konnte nicht gespeichert werden.",
+    "deleteError": "Skill konnte nicht gel\u00f6scht werden.",
+    "name": "Name",
+    "namePlaceholder": "z.B. Willkommens-Guide",
+    "nameHint": "Ein beschreibender Name f\u00fcr diesen Skill.",
+    "trigger": "Trigger",
+    "triggerPlaceholder": "z.B. neues Mitglied begr\u00fc\u00dfen",
+    "triggerHint": "Das Wort oder die Phrase, die diesen Skill im Chat aktiviert.",
+    "content": "Inhalt",
+    "contentPlaceholder": "Skill-Anweisungen in Markdown...",
+    "contentHint": "Die Anweisungen, denen die KI folgt, wenn dieser Skill ausgel\u00f6st wird. Unterst\u00fctzt Markdown.",
+    "createdBy": "Erstellt von",
+    "lastUpdated": "Zuletzt aktualisiert"
+  },
+  "settings": {
+    "title": "GuildAI Einstellungen",
+    "subtitle": "Konfiguriere den KI-Assistenten für deinen Server.",
+    "save": "Einstellungen speichern",
+    "saving": "Speichert...",
+    "saveSuccess": "Einstellungen erfolgreich gespeichert.",
+    "saveError": "Einstellungen konnten nicht gespeichert werden.",
+    "community": {
+      "heading": "Community",
+      "botName": "Bot-Name",
+      "botNamePlaceholder": "z.B. GuildAI",
+      "botNameHint": "Der Name, den der Bot für sich selbst verwendet.",
+      "name": "Community-Name",
+      "namePlaceholder": "z.B. Meine Gaming-Gilde",
+      "nameHint": "Der Bot nutzt diesen Namen, um sich als Teil deiner Community zu identifizieren.",
+      "defaultLanguage": "Standardsprache",
+      "defaultLanguageHint": "Der Bot begrüßt neue Gespräche in dieser Sprache. Danach passt er sich automatisch an die Sprache des Nutzers an.",
+      "timezone": "Zeitzone",
+      "timezoneHint": "Der Bot nutzt diese Zeitzone für Datums- und Zeitangaben (z.B. Europe/Berlin, America/New_York)."
+    },
+    "provider": {
+      "heading": "KI-Anbieter",
+      "apiProvider": "Anbieter",
+      "apiKey": "API-Schlüssel",
+      "apiKeyIsSet": "Schlüssel gesetzt",
+      "apiKeyHint": "Leer lassen, um den aktuellen Schlüssel zu behalten. Nur die letzten 4 Zeichen werden angezeigt.",
+      "model": "Modell",
+      "modelHint": "z.B. claude-sonnet-4-20250514, gpt-4o",
+      "maxTokens": "Max. Tokens pro Antwort"
+    },
+    "access": {
+      "heading": "Zugriff & Rate-Limits",
+      "allowedChatRoles": "Erlaubte Chat-Rollen",
+      "allowedChatRolesHint": "Kommagetrennt (z.B. moderator,admin)",
+      "allowedActionRoles": "Erlaubte Aktions-Rollen",
+      "allowedActionRolesHint": "Kommagetrennt (z.B. admin)",
+      "rateLimitPerMinute": "Rate-Limit (Nachrichten/Minute)",
+      "rateLimitPerRole": "Rollenspezifische Rate-Limits",
+      "rateLimitPerRoleHint": "JSON-Objekt, z.B. {'{'}'moderator': 20, 'admin': 50{'}'}",
+      "confirmationTimeout": "Bestätigungs-Timeout (Sekunden)",
+      "confirmationTimeoutHint": "Wie lange Benutzer eine Aktion bestätigen können"
+    },
+    "permissions": {
+      "heading": "Berechtigungen",
+      "description": "Konfiguriere, welche Aktionen jede Rolle auf jeder Plattform ausf\u00fchren kann. Gesperrte Rollen werden komplett ignoriert. Aktionen werden von niedrigeren Rollen geerbt."
+    },
+    "actions": {
+      "heading": "Sicherheit",
+      "readOnlyMode": "Nur-Lesen-Modus",
+      "readOnlyModeDesc": "Aktionen simulieren ohne auszuführen (zum Testen)",
+      "loggingEnabled": "Aktions-Protokollierung",
+      "loggingEnabledDesc": "Alle ausgeführten Aktionen protokollieren (90 Tage Aufbewahrung)"
+    },
+    "skills": {
+      "heading": "Skill-Bibliothek",
+      "description": "Verwalte eigene Skills, die die Fähigkeiten des KI-Assistenten erweitern.",
+      "manage": "Skills verwalten",
+      "allowedSkillPageRoles": "Zugriff auf Skill-Seite",
+      "allowedSkillPageRolesHint": "Kommagetrennte Rollen, die die Skill-Bibliothek sehen können",
+      "allowedSkillManageRoles": "Skill-Verwaltungsrollen",
+      "allowedSkillManageRolesHint": "Kommagetrennte Rollen, die Skills erstellen, bearbeiten und löschen können",
+      "allowedSkillCreateRoles": "KI Skill-Erstellungs-Rollen",
+      "allowedSkillCreateRolesHint": "Kommagetrennte Rollen, die KI-vorgeschlagene Skill-Erstellung bestätigen können"
+    },
+    "context": {
+      "heading": "Erweiterter Kontext",
+      "label": "Zusätzlicher Kontext",
+      "hint": "Dieser Text wird dem KI-Bot bei jeder Konversation als zusätzlicher Kontext mitgegeben. Nutze ihn für Server-Regeln, Community-Richtlinien oder andere Informationen."
+    },
+    "personality": {
+      "heading": "Erweiterte Persönlichkeit",
+      "label": "Persönlichkeit",
+      "hint": "Eigene Persönlichkeits- und Tonus-Anweisungen für den Bot. Das beeinflusst, wie der Bot schreibt und kommuniziert."
+    },
+    "gif": {
+      "heading": "GIF-Integration",
+      "apiKey": "Klipy API-Schlüssel",
+      "apiKeyIsSet": "Schlüssel gesetzt",
+      "apiKeyHint": "Kostenloser API-Schlüssel auf partner.klipy.com. Ermöglicht dem Bot, GIFs, Sticker und Clips in Gespräche einzubauen."
+    },
+    "channel": {
+      "heading": "Discord Chat-Kanal",
+      "channelId": "Kanal-ID",
+      "channelIdHint": "Discord-Kanal-ID eingeben, in dem der Bot auf Nachrichten antworten soll. Leer lassen zum Deaktivieren.",
+      "maxMessages": "Kontext-Nachrichten",
+      "maxMessagesHint": "Maximale Anzahl an Nachrichten-Paaren im Discord-Chat-Kontext bevor zusammengefasst wird (Standard: 10).",
+      "safeActionsHint": "Sichere Aktionen (Rolle zuweisen/entfernen, Kanal erstellen, Nachricht senden) werden automatisch ausgeführt. Destruktive Aktionen (Kick, Ban, Löschen) erfordern den GuildAI Hub."
+    },
+    "mcp": {
+      "heading": "MCP-Server",
+      "token": "Authentifizierungs-Token",
+      "tokenHint": "Verwende diesen Token, um externe KI-Clients per MCP zu verbinden.",
+      "regenerate": "Token neu generieren",
+      "regenerating": "Generiert...",
+      "regenerated": "Token neu generiert.",
+      "noToken": "Noch kein Token generiert."
+    }
+  },
+  "permissions": {
+    "role": "Rolle",
+    "blocked": "Gesperrt",
+    "inheritedHint": "Von einer niedrigeren Rolle geerbt"
+  },
+  "actions": {
+    "assign_role": "Rolle zuweisen",
+    "remove_role": "Rolle entfernen",
+    "kick_user": "Benutzer kicken",
+    "ban_user": "Benutzer bannen",
+    "create_channel": "Kanal erstellen",
+    "rename_channel": "Kanal umbenennen",
+    "move_channel": "Kanal verschieben",
+    "delete_channel": "Kanal löschen",
+    "send_message": "Nachricht senden",
+    "delete_message": "Nachricht löschen",
+    "create_skill": "Skill erstellen"
+  },
+  "actionlog": {
+    "title": "Audit Log",
+    "subtitle": "Alle ausgeführten Aktionen einsehen.",
+    "empty": "Noch keine Aktionen protokolliert.",
+    "filterSource": "Quelle",
+    "sourceAll": "Alle",
+    "user": "Benutzer",
+    "success": "Erfolgreich",
+    "failed": "Fehlgeschlagen",
+    "rejected": "Abgelehnt"
+  },
+  "usage": {
+    "title": "Token-Nutzung",
+    "subtitle": "Übersicht über die KI-Token-Nutzung der letzten 30 Tage.",
+    "empty": "Noch keine Nutzungsdaten vorhanden.",
+    "totalRequests": "Anfragen gesamt",
+    "inputTokens": "Input-Tokens",
+    "outputTokens": "Output-Tokens",
+    "bySource": "Nach Quelle",
+    "byModel": "Nach Modell",
+    "daily": "Tagesübersicht",
+    "source": "Quelle",
+    "model": "Modell",
+    "requests": "Anfragen",
+    "input": "Input",
+    "output": "Output",
+    "date": "Datum"
+  },
+  "error": {
+    "load": "Daten konnten nicht geladen werden. Bitte die Seite neu laden.",
+    "forbidden": "Du hast keine Berechtigung für diese Aktion.",
+    "stream": "Verbindung zur KI fehlgeschlagen. Bitte erneut versuchen.",
+    "action": "Aktion konnte nicht verarbeitet werden.",
+    "config": "Konfiguration konnte nicht geladen werden.",
+    "rateLimited": "Zu viele Anfragen. Bitte warten.",
+    "noApiKey": "KI-Anbieter nicht konfiguriert."
+  },
+  "loading": "Lädt...",
+  "back": "Zurück",
+  "save": "Speichern",
+  "cancel": "Abbrechen"
+}

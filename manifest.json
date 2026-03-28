@@ -1,0 +1,250 @@
+{
+  "id": "guildai",
+  "name": "GuildAI",
+  "version": "1.0.0",
+  "author": "guildora",
+  "description": "AI-powered Discord server administration assistant with safety controls.",
+  "repositoryUrl": "https://github.com/guildora/guildai",
+  "license": "MIT",
+  "compatibility": { "core": { "minVersion": "0.1.0" } },
+  "navigation": {
+    "rail": [
+      {
+        "id": "guildai",
+        "icon": "proicons:sparkle",
+        "label": "GuildAI",
+        "to": "/apps/guildai",
+        "order": 40,
+        "requiredRoles": ["user"]
+      }
+    ],
+    "panelGroups": [
+      {
+        "id": "guildai-group",
+        "railItemId": "guildai",
+        "items": [
+          { "id": "guildai-chat", "label": "Chat", "to": "/apps/guildai", "requiredRoles": ["moderator"] },
+          { "id": "guildai-history", "label": "History", "to": "/apps/guildai/history", "requiredRoles": ["moderator"] },
+          { "id": "guildai-actionlog", "label": "Audit Log", "to": "/apps/guildai/actionlog", "requiredRoles": ["admin"] },
+          { "id": "guildai-usage", "label": "Usage", "to": "/apps/guildai/usage", "requiredRoles": ["admin"] },
+          { "id": "guildai-skills", "label": "Skills", "to": "/apps/guildai/skills", "requiredRoles": ["moderator"] },
+          { "id": "guildai-settings", "label": "Settings", "to": "/apps/guildai/settings", "requiredRoles": ["admin"] }
+        ]
+      }
+    ]
+  },
+  "permissions": [
+    { "id": "read:member", "label": "Read members", "description": "Read member profiles and roles for AI context", "required": false },
+    { "id": "write:member", "label": "Modify members", "description": "Modify member profiles and roles via AI actions", "required": false },
+    { "id": "read:messages", "label": "Read messages", "description": "Access chat history for AI context", "required": false },
+    { "id": "write:messages", "label": "Send messages", "description": "Send messages and announcements via AI actions", "required": false },
+    { "id": "read:voice", "label": "View voice activity", "description": "View voice channel activity", "required": false },
+    { "id": "read:roles", "label": "View roles", "description": "View Discord roles", "required": false },
+    { "id": "write:roles", "label": "Manage roles", "description": "Manage Discord roles and permissions via AI actions", "required": false }
+  ],
+  "pages": [
+    { "id": "guildai-chat", "path": "/apps/guildai", "title": "Chat", "requiredRoles": ["user"], "component": "src/pages/chat.vue" },
+    { "id": "guildai-history", "path": "/apps/guildai/history", "title": "History", "requiredRoles": ["user"], "component": "src/pages/history.vue" },
+    { "id": "guildai-actionlog", "path": "/apps/guildai/actionlog", "title": "Audit Log", "requiredRoles": ["admin"], "component": "src/pages/actionlog.vue" },
+    { "id": "guildai-usage", "path": "/apps/guildai/usage", "title": "Usage", "requiredRoles": ["admin"], "component": "src/pages/usage.vue" },
+    { "id": "guildai-skills", "path": "/apps/guildai/skills", "title": "Skill Library", "requiredRoles": ["moderator"], "component": "src/pages/skills.vue" },
+    { "id": "guildai-settings", "path": "/apps/guildai/settings", "title": "Settings", "requiredRoles": ["user"], "component": "src/pages/settings.vue" }
+  ],
+  "apiRoutes": [
+    { "method": "POST", "path": "/api/apps/guildai/chat/stream", "handler": "src/api/chat/stream.post.ts", "requiredRoles": ["user"] },
+    { "method": "POST", "path": "/api/apps/guildai/action/confirm", "handler": "src/api/action/confirm.post.ts", "requiredRoles": ["user"] },
+    { "method": "GET", "path": "/api/apps/guildai/history", "handler": "src/api/history.get.ts", "requiredRoles": ["user"] },
+    { "method": "DELETE", "path": "/api/apps/guildai/history", "handler": "src/api/history.delete.ts", "requiredRoles": ["user"] },
+    { "method": "GET", "path": "/api/apps/guildai/actionlog", "handler": "src/api/actionlog.get.ts", "requiredRoles": ["admin"] },
+    { "method": "GET", "path": "/api/apps/guildai/usage", "handler": "src/api/usage.get.ts", "requiredRoles": ["admin"] },
+    { "method": "GET", "path": "/api/apps/guildai/config", "handler": "src/api/config.get.ts", "requiredRoles": ["user"] },
+    { "method": "PUT", "path": "/api/apps/guildai/config", "handler": "src/api/config.put.ts", "requiredRoles": ["user"] },
+    { "method": "POST", "path": "/api/apps/guildai/config/regenerate-token", "handler": "src/api/config/regenerate-token.post.ts", "requiredRoles": ["user"] },
+    { "method": "GET", "path": "/api/apps/guildai/skills", "handler": "src/api/skills.get.ts", "requiredRoles": ["moderator"] },
+    { "method": "POST", "path": "/api/apps/guildai/skills", "handler": "src/api/skills.post.ts", "requiredRoles": ["admin"] },
+    { "method": "PUT", "path": "/api/apps/guildai/skills", "handler": "src/api/skills.put.ts", "requiredRoles": ["admin"] },
+    { "method": "DELETE", "path": "/api/apps/guildai/skills", "handler": "src/api/skills.delete.ts", "requiredRoles": ["admin"] },
+    { "method": "GET", "path": "/api/apps/guildai/mcp/tools", "handler": "src/api/mcp/tools.get.ts" },
+    { "method": "POST", "path": "/api/apps/guildai/mcp/call", "handler": "src/api/mcp/call.post.ts" }
+  ],
+  "botHooks": ["onMessage"],
+  "botCommands": [],
+  "configFields": [
+    {
+      "key": "botName",
+      "type": "string",
+      "label": "Bot Name",
+      "description": "Custom name for the AI bot (default: GuildAI).",
+      "defaultValue": "GuildAI"
+    },
+    {
+      "key": "communityName",
+      "type": "string",
+      "label": "Community Name",
+      "description": "Name of your community (used by the AI bot for identity).",
+      "defaultValue": ""
+    },
+    {
+      "key": "defaultLanguage",
+      "type": "select",
+      "label": "Default Language",
+      "description": "Bot's default language for greetings and initial messages.",
+      "options": ["en", "de"],
+      "defaultValue": "en"
+    },
+    {
+      "key": "timezone",
+      "type": "string",
+      "label": "Timezone",
+      "description": "Timezone for date/time context (e.g. Europe/Berlin, America/New_York).",
+      "defaultValue": "Europe/Berlin"
+    },
+    {
+      "key": "apiProvider",
+      "type": "select",
+      "label": "AI Provider",
+      "description": "Which AI provider to use.",
+      "options": ["anthropic", "openai"],
+      "defaultValue": "anthropic"
+    },
+    {
+      "key": "apiKey",
+      "type": "string",
+      "label": "API Key",
+      "description": "API key for the selected provider (stored encrypted)."
+    },
+    {
+      "key": "model",
+      "type": "string",
+      "label": "Model",
+      "description": "Model identifier (e.g. claude-sonnet-4-20250514, gpt-4o).",
+      "defaultValue": "claude-sonnet-4-20250514"
+    },
+    {
+      "key": "maxTokens",
+      "type": "number",
+      "label": "Max Tokens per Response",
+      "description": "Maximum tokens per AI response.",
+      "defaultValue": 2048
+    },
+    {
+      "key": "allowedChatRoles",
+      "type": "string",
+      "label": "Allowed Chat Roles",
+      "description": "Comma-separated roles that can use the chat (e.g. moderator,admin,superadmin).",
+      "defaultValue": "moderator,admin,superadmin"
+    },
+    {
+      "key": "allowedActionRoles",
+      "type": "string",
+      "label": "Allowed Action Roles",
+      "description": "Comma-separated roles that can confirm actions (e.g. admin,superadmin).",
+      "defaultValue": "admin,superadmin"
+    },
+    {
+      "key": "rateLimitPerMinute",
+      "type": "number",
+      "label": "Rate Limit (messages/minute)",
+      "description": "Max messages per user per minute.",
+      "defaultValue": 10
+    },
+    {
+      "key": "rateLimitPerRole",
+      "type": "string",
+      "label": "Role-specific Rate Limits (JSON)",
+      "description": "Optional JSON object: {\"user\": 5, \"moderator\": 20, \"admin\": 50}.",
+      "defaultValue": "{}"
+    },
+    {
+      "key": "confirmationTimeout",
+      "type": "number",
+      "label": "Confirmation Timeout (seconds)",
+      "description": "Seconds before a pending action expires.",
+      "defaultValue": 60
+    },
+    {
+      "key": "enabledActions",
+      "type": "string",
+      "label": "Enabled Actions",
+      "description": "Comma-separated action types the AI may propose.",
+      "defaultValue": "assign_role,remove_role,kick_user,ban_user,create_channel,rename_channel,move_channel,delete_channel,send_message,delete_message,create_skill"
+    },
+    {
+      "key": "allowedSkillPageRoles",
+      "type": "string",
+      "label": "Skill Page Access Roles",
+      "description": "Comma-separated roles that can view the Skill Library page (e.g. moderator,admin,superadmin).",
+      "defaultValue": "moderator,admin,superadmin"
+    },
+    {
+      "key": "allowedSkillManageRoles",
+      "type": "string",
+      "label": "Skill Management Roles",
+      "description": "Comma-separated roles that can create, edit, and delete skills (e.g. admin,superadmin).",
+      "defaultValue": "admin,superadmin"
+    },
+    {
+      "key": "allowedSkillCreateRoles",
+      "type": "string",
+      "label": "AI Skill Creation Roles",
+      "description": "Comma-separated roles that can confirm AI-proposed skill creation (e.g. admin,superadmin).",
+      "defaultValue": "admin,superadmin"
+    },
+    {
+      "key": "readOnlyMode",
+      "type": "boolean",
+      "label": "Read-Only Mode (Testing)",
+      "description": "When enabled, actions are simulated but not executed.",
+      "defaultValue": false
+    },
+    {
+      "key": "loggingEnabled",
+      "type": "boolean",
+      "label": "Action Logging",
+      "description": "Log all executed actions (90-day retention).",
+      "defaultValue": true
+    },
+    {
+      "key": "customContext",
+      "type": "string",
+      "label": "Extended Context",
+      "description": "Custom context provided to the AI in every conversation.",
+      "defaultValue": ""
+    },
+    {
+      "key": "customPersonality",
+      "type": "string",
+      "label": "Extended Personality",
+      "description": "Custom personality and tone instructions for the AI bot.",
+      "defaultValue": ""
+    },
+    {
+      "key": "discordMaxMessages",
+      "type": "number",
+      "label": "Discord Context Messages",
+      "description": "Maximum number of message pairs kept in Discord chat context before summarization (default: 10).",
+      "defaultValue": 10
+    },
+    {
+      "key": "aiChatChannelId",
+      "type": "string",
+      "label": "AI Chat Channel ID",
+      "description": "Discord channel ID to use as AI chat channel. Leave empty to disable."
+    },
+    {
+      "key": "aiChatChannelAutoExecuteActions",
+      "type": "boolean",
+      "label": "Auto-execute Actions in Chat Channel",
+      "description": "Deprecated — safe actions are always auto-executed in the Discord channel. Destructive actions require the Hub.",
+      "defaultValue": true
+    },
+    {
+      "key": "klipyApiKey",
+      "type": "string",
+      "label": "Klipy API Key",
+      "description": "API key for GIF/sticker/clip integration (get one at partner.klipy.com)."
+    }
+  ],
+  "requiredEnv": [],
+  "installNotes": "Set your AI provider API key in Settings before using the chat."
+}
