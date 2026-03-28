@@ -28,6 +28,7 @@
           { "id": "guildai-actionlog", "label": "Audit Log", "to": "/apps/guildai/actionlog", "requiredRoles": ["admin"] },
           { "id": "guildai-usage", "label": "Usage", "to": "/apps/guildai/usage", "requiredRoles": ["admin"] },
           { "id": "guildai-skills", "label": "Skills", "to": "/apps/guildai/skills", "requiredRoles": ["moderator"] },
+          { "id": "guildai-memories", "label": "Memories", "to": "/apps/guildai/memories", "requiredRoles": ["moderator"] },
           { "id": "guildai-settings", "label": "Settings", "to": "/apps/guildai/settings", "requiredRoles": ["admin"] }
         ]
       }
@@ -48,6 +49,7 @@
     { "id": "guildai-actionlog", "path": "/apps/guildai/actionlog", "title": "Audit Log", "requiredRoles": ["admin"], "component": "src/pages/actionlog.vue" },
     { "id": "guildai-usage", "path": "/apps/guildai/usage", "title": "Usage", "requiredRoles": ["admin"], "component": "src/pages/usage.vue" },
     { "id": "guildai-skills", "path": "/apps/guildai/skills", "title": "Skill Library", "requiredRoles": ["moderator"], "component": "src/pages/skills.vue" },
+    { "id": "guildai-memories", "path": "/apps/guildai/memories", "title": "Memories", "requiredRoles": ["moderator"], "component": "src/pages/memories.vue" },
     { "id": "guildai-settings", "path": "/apps/guildai/settings", "title": "Settings", "requiredRoles": ["user"], "component": "src/pages/settings.vue" }
   ],
   "apiRoutes": [
@@ -64,6 +66,10 @@
     { "method": "POST", "path": "/api/apps/guildai/skills", "handler": "src/api/skills.post.ts", "requiredRoles": ["admin"] },
     { "method": "PUT", "path": "/api/apps/guildai/skills", "handler": "src/api/skills.put.ts", "requiredRoles": ["admin"] },
     { "method": "DELETE", "path": "/api/apps/guildai/skills", "handler": "src/api/skills.delete.ts", "requiredRoles": ["admin"] },
+    { "method": "GET", "path": "/api/apps/guildai/memories", "handler": "src/api/memories.get.ts", "requiredRoles": ["moderator"] },
+    { "method": "POST", "path": "/api/apps/guildai/memories", "handler": "src/api/memories.post.ts", "requiredRoles": ["moderator"] },
+    { "method": "PUT", "path": "/api/apps/guildai/memories", "handler": "src/api/memories.put.ts", "requiredRoles": ["moderator"] },
+    { "method": "DELETE", "path": "/api/apps/guildai/memories", "handler": "src/api/memories.delete.ts", "requiredRoles": ["moderator"] },
     { "method": "DELETE", "path": "/api/apps/guildai/channel-conv", "handler": "src/api/channel-conv.delete.ts", "requiredRoles": ["admin"] },
     { "method": "GET", "path": "/api/apps/guildai/mcp/tools", "handler": "src/api/mcp/tools.get.ts" },
     { "method": "POST", "path": "/api/apps/guildai/mcp/call", "handler": "src/api/mcp/call.post.ts" }
@@ -230,6 +236,13 @@
       "type": "boolean",
       "label": "Auto-execute Actions in Chat Channel",
       "description": "Deprecated — safe actions are always auto-executed in the Discord channel. Destructive actions require the Hub.",
+      "defaultValue": true
+    },
+    {
+      "key": "imageRecognitionEnabled",
+      "type": "boolean",
+      "label": "Image Recognition",
+      "description": "Allow the AI to recognize and analyze images sent in the Discord chat channel.",
       "defaultValue": true
     },
     {

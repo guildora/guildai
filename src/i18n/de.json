@@ -5,7 +5,8 @@
     "actionlog": "Audit Log",
     "usage": "Nutzung",
     "settings": "Einstellungen",
-    "skills": "Skills"
+    "skills": "Skills",
+    "memories": "Erinnerungen"
   },
   "chat": {
     "title": "GuildAI Chat",
@@ -159,6 +160,8 @@
       "maxMessages": "Kontext-Nachrichten",
       "maxMessagesHint": "Maximale Anzahl an Nachrichten-Paaren im Discord-Chat-Kontext bevor zusammengefasst wird (Standard: 10).",
       "safeActionsHint": "Welche Aktionen im Discord-Kanal ausgeführt werden können, wird über die Berechtigungsmatrix gesteuert.",
+      "imageRecognition": "Bilderkennung",
+      "imageRecognitionDesc": "Erlaubt der KI, Bilder in diesem Kanal zu erkennen und zu analysieren.",
       "resetConversation": "Konversation zurücksetzen",
       "resetting": "Wird zurückgesetzt...",
       "resetSuccess": "Konversation zurückgesetzt."
@@ -189,7 +192,42 @@
     "delete_channel": "Kanal löschen",
     "send_message": "Nachricht senden",
     "delete_message": "Nachricht löschen",
-    "create_skill": "Skill erstellen"
+    "create_skill": "Skill erstellen",
+    "save_memory": "Erinnerung speichern",
+    "delete_memory": "Erinnerung löschen"
+  },
+  "memories": {
+    "title": "Erinnerungen",
+    "subtitle": "Gespeicherte Erinnerungen der KI über deine Community ansehen und verwalten.",
+    "empty": "Noch keine Erinnerungen gespeichert.",
+    "add": "Erinnerung hinzufügen",
+    "edit": "Bearbeiten",
+    "delete": "Löschen",
+    "pin": "Anpinnen",
+    "unpin": "Lösen",
+    "pinned": "Key Memory",
+    "deleteConfirmTitle": "Erinnerung löschen",
+    "deleteConfirm": "Bist du sicher? Dies kann nicht rückgängig gemacht werden.",
+    "memoryDeleted": "Erinnerung gelöscht.",
+    "memoryCreated": "Erinnerung erstellt.",
+    "memoryUpdated": "Erinnerung aktualisiert.",
+    "saveError": "Erinnerung konnte nicht gespeichert werden.",
+    "deleteError": "Erinnerung konnte nicht gelöscht werden.",
+    "fieldTitle": "Titel",
+    "titlePlaceholder": "z.B. Gilden-Raidplan",
+    "titleHint": "Ein kurzer, beschreibender Titel (max 100 Zeichen).",
+    "fieldContent": "Inhalt",
+    "contentPlaceholder": "Ausführliche Details zu dieser Erinnerung...",
+    "contentHint": "Detaillierte Informationen, die bei aktuellen Erinnerungen angezeigt werden (max 1000 Zeichen).",
+    "fieldSummary": "Zusammenfassung",
+    "summaryPlaceholder": "Eine kürzere Version des Inhalts...",
+    "summaryHint": "Komprimierte Version für ältere Erinnerungen (max 300 Zeichen).",
+    "fieldKeywords": "Schlüsselwörter",
+    "keywordsPlaceholder": "z.B. Raid, Zeitplan, wöchentlich",
+    "keywordsHint": "Kommagetrennte Schlüsselwörter für sehr alte Erinnerungen (max 100 Zeichen).",
+    "fieldPinned": "Key Memory (immer volle Details anzeigen)",
+    "created": "Erstellt",
+    "updated": "Aktualisiert"
   },
   "actionlog": {
     "title": "Audit Log",

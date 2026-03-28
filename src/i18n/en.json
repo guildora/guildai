@@ -5,7 +5,8 @@
     "actionlog": "Audit Log",
     "usage": "Usage",
     "settings": "Settings",
-    "skills": "Skills"
+    "skills": "Skills",
+    "memories": "Memories"
   },
   "chat": {
     "title": "GuildAI Chat",
@@ -159,6 +160,8 @@
       "maxMessages": "Context Messages",
       "maxMessagesHint": "Maximum number of message pairs kept in Discord chat context before summarization (default: 10).",
       "safeActionsHint": "Which actions can be executed in the Discord channel is controlled by the permissions matrix.",
+      "imageRecognition": "Image Recognition",
+      "imageRecognitionDesc": "Allow the AI to recognize and analyze images sent in this channel.",
       "resetConversation": "Reset Conversation",
       "resetting": "Resetting...",
       "resetSuccess": "Conversation reset."
@@ -189,7 +192,42 @@
     "delete_channel": "Delete Channel",
     "send_message": "Send Message",
     "delete_message": "Delete Message",
-    "create_skill": "Create Skill"
+    "create_skill": "Create Skill",
+    "save_memory": "Save Memory",
+    "delete_memory": "Delete Memory"
+  },
+  "memories": {
+    "title": "Memories",
+    "subtitle": "View and manage the AI's saved memories about your community.",
+    "empty": "No memories saved yet.",
+    "add": "Add Memory",
+    "edit": "Edit",
+    "delete": "Delete",
+    "pin": "Pin",
+    "unpin": "Unpin",
+    "pinned": "Key Memory",
+    "deleteConfirmTitle": "Delete Memory",
+    "deleteConfirm": "Are you sure you want to delete this memory? This cannot be undone.",
+    "memoryDeleted": "Memory deleted.",
+    "memoryCreated": "Memory created.",
+    "memoryUpdated": "Memory updated.",
+    "saveError": "Failed to save memory.",
+    "deleteError": "Failed to delete memory.",
+    "fieldTitle": "Title",
+    "titlePlaceholder": "e.g. Guild raid schedule",
+    "titleHint": "A short, descriptive title (max 100 characters).",
+    "fieldContent": "Content",
+    "contentPlaceholder": "Full details about this memory...",
+    "contentHint": "Detailed information shown for recent memories (max 1000 characters).",
+    "fieldSummary": "Summary",
+    "summaryPlaceholder": "A shorter version of the content...",
+    "summaryHint": "Compressed version shown for older memories (max 300 characters).",
+    "fieldKeywords": "Keywords",
+    "keywordsPlaceholder": "e.g. raid, schedule, weekly",
+    "keywordsHint": "Comma-separated keywords for very old memories (max 100 characters).",
+    "fieldPinned": "Key Memory (always show full details)",
+    "created": "Created",
+    "updated": "Updated"
   },
   "actionlog": {
     "title": "Audit Log",

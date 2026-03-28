@@ -38,7 +38,8 @@ const SUMMARIZE_AFTER_PAIRS = 3
 const ALL_KNOWN_ACTIONS = [
   'assign_role', 'remove_role', 'kick_user', 'ban_user',
   'create_channel', 'rename_channel', 'move_channel', 'delete_channel',
-  'send_message', 'delete_message', 'create_skill'
+  'send_message', 'delete_message', 'create_skill',
+  'save_memory', 'delete_memory'
 ]
 const MEDIA_PATTERN = /\[(GIF|STICKER|CLIP):\s*([^\]]+)\]/g
 
@@ -581,6 +582,48 @@ async function executeActionInline(
       return { success: true, message: de ? `Skill "${name}" erstellt.` : `Skill "${name}" created.` }
     }
 
+    case 'save_memory': {
+      const { title, content, summary, keywords, pinned } = action.params
+      if (!title || !content || !summary || !keywords) {
+        return { success: false, message: de ? 'Fehlende Parameter (title/content/summary/keywords).' : 'Missing parameters (title/content/summary/keywords).' }
+      }
+      if (title.length > 100 || content.length > 1000 || summary.length > 300 || keywords.length > 100) {
+        return { success: false, message: de ? 'Parameter zu lang.' : 'Parameter too long.' }
+      }
+      const memories = ((await db.get('memories:all')) as Array<{ id: string; title: string; content: string; summary: string; keywords: string; pinned: boolean; createdBy: string; createdAt: number; updatedAt: number; source: string }>) || []
+      if (memories.length >= 50) {
+        const nonPinned = memories.filter(m => !m.pinned).sort((a, b) => a.createdAt - b.createdAt)
+        if (nonPinned.length > 0) {
+          const idx = memories.indexOf(nonPinned[0])
+          if (idx !== -1) memories.splice(idx, 1)
+        }
+      }
+      memories.push({
+        id: 'mem_' + Math.random().toString(36).slice(2, 10),
+        title: title.trim(),
+        content: content.trim(),
+        summary: summary.trim(),
+        keywords: keywords.trim(),
+        pinned: pinned === true || pinned === 'true',
+        createdBy: 'discord',
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        source: 'discord'
+      })
+      await db.set('memories:all', memories)
+      return { success: true, message: de ? `Erinnerung "${title}" gespeichert.` : `Memory "${title}" saved.` }
+    }
+
+    case 'delete_memory': {
+      const { memoryId } = action.params
+      if (!memoryId) return { success: false, message: de ? 'Fehlender Parameter (memoryId).' : 'Missing parameter (memoryId).' }
+      const mems = ((await db.get('memories:all')) as Array<{ id: string; title: string; content: string; summary: string; keywords: string; pinned: boolean; createdBy: string; createdAt: number; updatedAt: number; source: string }>) || []
+      const filtered = mems.filter(m => m.id !== memoryId)
+      if (filtered.length === mems.length) return { success: false, message: de ? 'Erinnerung nicht gefunden.' : 'Memory not found.' }
+      await db.set('memories:all', filtered)
+      return { success: true, message: de ? 'Erinnerung gelöscht.' : 'Memory deleted.' }
+    }
+
     case 'kick_user': {
       const { userId, reason } = action.params
       if (!userId) return { success: false, message: de ? 'Fehlender Parameter (userId).' : 'Missing parameter (userId).' }
@@ -692,7 +735,7 @@ function buildChannelSystemPrompt(
   config: Record<string, unknown>,
   guildId: string,
   currentUser: { memberId: string; displayName: string },
-  options?: { hasGifApi?: boolean; skills?: Array<{ name: string; trigger: string; content: string }>; allowedActions?: string[]; communityRoster?: string }
+  options?: { hasGifApi?: boolean; skills?: Array<{ name: string; trigger: string; content: string }>; allowedActions?: string[]; communityRoster?: string; memories?: Array<{ id: string; title: string; content: string; summary: string; keywords: string; pinned: boolean; createdAt: number }> }
 ): string {
   const readOnly = config.readOnlyMode ?? false
   const botName = (config.botName as string) || 'GuildAI'
@@ -710,7 +753,9 @@ function buildChannelSystemPrompt(
     kick_user: '- [ACTION: kick_user] {"userId": "...", "reason": "..."} : Kick a user from the server',
     ban_user: '- [ACTION: ban_user] {"userId": "...", "reason": "..."} : Ban a user from the server',
     delete_channel: '- [ACTION: delete_channel] {"channelName": "..."} : Delete a Discord channel (use plain channel name)',
-    delete_message: '- [ACTION: delete_message] {"channelName": "...", "messageId": "..."} : Delete a message from a channel (use plain channel name)'
+    delete_message: '- [ACTION: delete_message] {"channelName": "...", "messageId": "..."} : Delete a message from a channel (use plain channel name)',
+    save_memory: '- [ACTION: save_memory] {"title": "...", "content": "...", "summary": "...", "keywords": "...", "pinned": false} : Save an important memory about the guild. Set pinned to true for key memories.',
+    delete_memory: '- [ACTION: delete_memory] {"memoryId": "..."} : Delete a saved memory by its ID'
   }
 
   // Use allowedActions if provided, otherwise fall back to all known actions
@@ -797,7 +842,7 @@ SECURITY:
 HELPFULNESS:
 If the user asks questions about GuildAI, the Guildora platform, how to configure settings, or how features work, answer them based on the following knowledge. Be helpful and concise.
 
-${DOCS_SECTION}${options?.communityRoster ? `\n\nCOMMUNITY ROSTER (current members and their roles):\nUse this to answer questions about who has which role. Do not dump the full roster unprompted.\n${options.communityRoster}` : ''}${config.customContext ? `\n\nCUSTOM CONTEXT (provided by the server admin):\n${config.customContext}` : ''}${buildChannelSkillsSection(options?.skills)}`
+${DOCS_SECTION}${options?.communityRoster ? `\n\nCOMMUNITY ROSTER (current members and their roles):\nUse this to answer questions about who has which role. Do not dump the full roster unprompted.\n${options.communityRoster}` : ''}${config.customContext ? `\n\nCUSTOM CONTEXT (provided by the server admin):\n${config.customContext}` : ''}${buildChannelSkillsSection(options?.skills)}${buildChannelMemoryInstructions()}${buildChannelMemoriesSection(options?.memories)}`
 }
 
 function buildChannelSkillsSection(skills?: Array<{ name: string; trigger: string; content: string }>): string {
@@ -814,13 +859,99 @@ The following custom skills are available. When a user's message matches or clos
 ${entries}`
 }
 
+function buildChannelMemoryInstructions(): string {
+  return `\n\nMEMORY SYSTEM:
+You can save important information as memories that persist across all conversations and devices.
+
+WHEN TO SAVE:
+- Important community decisions, rules, or policies
+- Upcoming events, deadlines, or milestones
+- Personal preferences, roles, or responsibilities of members
+- Community traditions, recurring events
+- When a user explicitly asks you to remember something
+
+WHEN NOT TO SAVE:
+- Casual conversation or small talk
+- Temporary information ("I'm AFK for 5 minutes")
+- Information already saved as a memory
+- Sensitive personal data (passwords, private contact info)
+
+HOW TO SAVE:
+When you identify something worth remembering, ask: "Soll ich mir das merken?" / "Should I save this as a memory?"
+If they agree, use save_memory with ALL fields:
+- title: Short descriptive title (max 100 chars)
+- content: Full detailed information (max 1000 chars)
+- summary: Compressed version with key facts (max 300 chars)
+- keywords: Comma-separated keywords (max 100 chars)
+- pinned: Set to true for crucial, permanent information (key rules, core facts about the guild). Use false for regular memories.
+
+KEY MEMORIES (pinned):
+Key memories are always shown with full details regardless of age. Use pinned: true for:
+- Fundamental guild rules or policies
+- Core information that should never be compressed
+- Information the user explicitly marks as important
+Users can also create and manage key memories manually in the Hub.
+
+HOW TO DELETE:
+If asked to forget something, find the matching memory ID from the list below and use delete_memory.`
+}
+
+function buildChannelMemoriesSection(memories?: Array<{ id: string; title: string; content: string; summary: string; keywords: string; pinned: boolean; createdAt: number }>): string {
+  if (!memories || memories.length === 0) return ''
+
+  const now = Date.now()
+  const DAY = 86400000
+  const WEEK = 7 * DAY
+  const MONTH = 30 * DAY
+  const maxChars = 3000
+
+  const pinned = memories.filter(m => m.pinned).sort((a, b) => b.createdAt - a.createdAt)
+  const normal = memories.filter(m => !m.pinned).sort((a, b) => b.createdAt - a.createdAt)
+  const sorted = [...pinned, ...normal].slice(0, 50)
+
+  let totalChars = 0
+  const lines: string[] = []
+  let omitted = 0
+
+  for (const mem of sorted) {
+    const age = now - mem.createdAt
+    let line: string
+
+    if (mem.pinned) {
+      line = `- [pinned] ${mem.title} [id:${mem.id}]: ${mem.content}`
+    } else if (age < DAY) {
+      line = `- ${mem.title} [id:${mem.id}]: ${mem.content}`
+    } else if (age < WEEK) {
+      line = `- ${mem.title} [id:${mem.id}]: ${mem.summary}`
+    } else if (age < MONTH) {
+      line = `- ${mem.title} [id:${mem.id}] (${mem.keywords})`
+    } else {
+      line = `- ${mem.title} [id:${mem.id}]`
+    }
+
+    if (totalChars + line.length + 1 > maxChars) {
+      omitted = sorted.length - lines.length
+      break
+    }
+
+    lines.push(line)
+    totalChars += line.length + 1
+  }
+
+  if (omitted > 0) {
+    lines.push(`... and ${omitted} older memories omitted`)
+  }
+
+  return `\n\nGUILD MEMORIES:\nUse these to provide context-aware responses. Do not dump memories unprompted.\n${lines.join('\n')}`
+}
+
 async function callAINonStreaming(
   provider: string,
   apiKey: string,
   model: string,
   maxTokens: number,
   systemPrompt: string,
-  messages: Array<{ role: string; content: string }>,
+  messages: Array<{ role: string; content: string | Array<any> }>,
   promptCaching: boolean = false
 ): Promise<{ text: string; usage: { inputTokens: number; outputTokens: number; cacheCreationInputTokens: number; cacheReadInputTokens: number } }> {
   if (provider === 'anthropic') {
@@ -957,12 +1088,12 @@ async function trackUsageInline(
 }
 
 async function summarizeOldMessages(
-  messages: Array<{ role: string; content: string }>,
+  messages: Array<{ role: string; content: string | Array<any> }>,
   summary: string | null,
   provider: string,
   apiKey: string,
   model: string
-): Promise<{ messages: Array<{ role: string; content: string }>; summary: string | null; summarizedUpTo: number }> {
+): Promise<{ messages: Array<{ role: string; content: string | Array<any> }>; summary: string | null; summarizedUpTo: number }> {
   // Keep the last SUMMARIZE_AFTER_PAIRS pairs (6 messages) as-is
   const keepCount = SUMMARIZE_AFTER_PAIRS * 2
   if (messages.length <= keepCount) {
@@ -977,7 +1108,12 @@ async function summarizeOldMessages(
   if (summary) {
     toSummarize += `Previous summary: ${summary}\n\n`
   }
-  toSummarize += oldMessages.map(m => `${m.role}: ${m.content}`).join('\n')
+  toSummarize += oldMessages.map(m => {
+    const text = Array.isArray(m.content)
+      ? m.content.filter((p: any) => p.type === 'text').map((p: any) => p.text).join('')
+      : m.content
+    return `${m.role}: ${text}`
+  }).join('\n')
 
   try {
     const result = await callAINonStreaming(
@@ -992,7 +1128,7 @@ async function summarizeOldMessages(
     }
 
     // Prepend summary as context for the AI
-    const summarizedMessages: Array<{ role: string; content: string }> = [
+    const summarizedMessages: Array<{ role: string; content: string | Array<any> }> = [
       { role: 'user', content: `[CONVERSATION SUMMARY]: ${newSummary}` },
       { role: 'assistant', content: 'Understood, I have the context from the previous conversation.' },
       ...recentMessages
@@ -1020,8 +1156,8 @@ exports.onMessage = async function onMessage(payload: MessagePayload, ctx: BotCo
   const configuredChannel = ctx.config.aiChatChannelId as string
   if (!configuredChannel || channelId !== configuredChannel) return
 
-  // Ignore empty messages
-  if (!content || !content.trim()) return
+  // Ignore empty messages (unless they have image attachments)
+  if ((!content || !content.trim()) && (!payload.attachments || payload.attachments.length === 0)) return
 
   // Ignore replies to other users (only respond to replies directed at the bot)
   if (payload.replyToUserId && payload.replyToUserId !== ctx.botUserId) return
@@ -1077,24 +1213,39 @@ exports.onMessage = async function onMessage(payload: MessagePayload, ctx: BotCo
       messages: [],
       createdAt: Date.now()
     }
-    const messages: Array<{ role: string; content: string }> = conversation.messages || []
+    const messages: Array<{ role: string; content: string | Array<any> }> = conversation.messages || []
 
     // Reset stale conversations (older than 24h)
     if (conversation.updatedAt && (Date.now() - conversation.updatedAt) > MAX_CONV_AGE) {
       messages.length = 0
     }
 
+    // Call AI (non-streaming)
+    const provider = (ctx.config.apiProvider as string) || 'anthropic'
+
     // Append user message with display name attribution
-    messages.push({ role: 'user', content: `[${displayName} <@${memberId}>]: ${content}` })
+    const userText = `[${displayName} <@${memberId}>]: ${content || ''}`
+    const imageRecognitionEnabled = ctx.config.imageRecognitionEnabled !== false
+    if (imageRecognitionEnabled && payload.attachments && payload.attachments.length > 0) {
+      const contentParts: Array<any> = []
+      for (const att of payload.attachments.slice(0, 4)) {
+        if (provider === 'anthropic') {
+          contentParts.push({ type: 'image', source: { type: 'url', url: att.url } })
+        } else {
+          contentParts.push({ type: 'image_url', image_url: { url: att.url } })
+        }
+      }
+      contentParts.push({ type: 'text', text: userText })
+      messages.push({ role: 'user', content: contentParts })
+    } else {
+      messages.push({ role: 'user', content: userText })
+    }
 
     // Trim to max messages (configurable)
     const maxPairs = (ctx.config.discordMaxMessages as number) || DEFAULT_DISCORD_MAX_MESSAGES
     while (messages.length > maxPairs * 2) {
       messages.shift()
     }
-
-    // Call AI (non-streaming)
-    const provider = (ctx.config.apiProvider as string) || 'anthropic'
     const model = (ctx.config.model as string) || 'claude-sonnet-4-20250514'
     const maxTokens = (ctx.config.maxTokens as number) || 2048
     const usePromptCaching = ctx.config.promptCachingEnabled !== false
@@ -1115,15 +1266,16 @@ exports.onMessage = async function onMessage(payload: MessagePayload, ctx: BotCo
     // Load Klipy API key for GIF integration
     const klipyApiKey = (await ctx.db.get('secrets:klipyApiKey') as string) || ''
 
-    // Load skills and community roster for system prompt
+    // Load skills, memories and community roster for system prompt
     const skills = ((await ctx.db.get('skills:all')) as Array<{ name: string; trigger: string; content: string }>) || []
+    const memories = ((await ctx.db.get('memories:all')) as Array<{ id: string; title: string; content: string; summary: string; keywords: string; pinned: boolean; createdAt: number }>) || []
     const communityRoster = await buildRoster(ctx.db)
 
     // Build system prompt with current user context and allowed actions
     const systemPrompt = buildChannelSystemPrompt(ctx.config, guildId, {
       memberId,
       displayName
-    }, { hasGifApi: !!klipyApiKey, skills, allowedActions: userPerms.allowedActions, communityRoster })
+    }, { hasGifApi: !!klipyApiKey, skills, memories, allowedActions: userPerms.allowedActions, communityRoster })
 
     let aiResponse: string
     try {
@@ -1239,8 +1391,18 @@ exports.onMessage = async function onMessage(payload: MessagePayload, ctx: BotCo
       messages.shift()
     }
 
+    // Flatten image messages to text for storage (Discord CDN URLs expire)
+    const storableMessages = messages.map(m => {
+      if (Array.isArray(m.content)) {
+        const texts = m.content.filter((p: any) => p.type === 'text').map((p: any) => p.text).join('')
+        const imgCount = m.content.filter((p: any) => p.type === 'image' || p.type === 'image_url').length
+        return { role: m.role, content: (imgCount > 0 ? `[${imgCount} image(s) attached] ` : '') + texts }
+      }
+      return m
+    })
+
     await ctx.db.set(convKey, {
-      messages,
+      messages: storableMessages,
       summary: currentSummary,
       createdAt: conversation.createdAt,
       updatedAt: Date.now()

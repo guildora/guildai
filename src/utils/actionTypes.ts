@@ -47,6 +47,14 @@ export const ACTION_TYPES: Record<string, ActionDefinition> = {
   create_skill: {
     params: ['name', 'trigger', 'content'],
     description: 'Create a new custom skill in the Skill Library'
+  },
+  save_memory: {
+    params: ['title', 'content', 'summary', 'keywords', 'pinned'],
+    description: 'Save an important memory about the guild, its members, or events. Set pinned to true for key memories that should always show full details.'
+  },
+  delete_memory: {
+    params: ['memoryId'],
+    description: 'Delete a saved memory by its ID'
   }
 }
 

@@ -6,6 +6,8 @@ import { executeAction, logAction } from '../../utils/botBridge'
 import type { ExtractedAction } from '../../utils/actionExtractor'
 import type { Skill } from '../../utils/skillTypes'
 import { generateSkillId, validateSkill } from '../../utils/skillTypes'
+import type { Memory } from '../../utils/memoryTypes'
+import { generateMemoryId, validateMemory } from '../../utils/memoryTypes'
 import { resolvePermissions, isRoleBlocked, canExecuteAction } from '../../utils/permissions'
 
 export default defineEventHandler(async (event) => {
@@ -92,6 +94,83 @@ export default defineEventHandler(async (event) => {
       await logAction(db, actionId, userId, action, skillResult, true, 'hub')
     }
     return { ok: true, approved: true, result: skillResult }
+  }
+
+  // Handle save_memory locally (not via bot bridge)
+  if (action.type === 'save_memory') {
+    const validationError = validateMemory(action.params)
+    if (validationError) {
+      const errorResult = { success: false, message: '', error: validationError }
+      if (config.loggingEnabled ?? true) {
+        await logAction(db, actionId, userId, action, errorResult, true, 'hub')
+      }
+      return { ok: true, approved: true, result: errorResult }
+    }
+
+    const memories = (await db.get('memories:all') as Memory[]) || []
+
+    // Enforce max 50 memories: remove oldest non-pinned
+    if (memories.length >= 50) {
+      const oldestNonPinnedIdx = memories
+        .map((m, i) => ({ ...m, _idx: i }))
+        .filter(m => !m.pinned)
+        .sort((a, b) => a.createdAt - b.createdAt)
+      if (oldestNonPinnedIdx.length > 0) {
+        memories.splice(oldestNonPinnedIdx[0]._idx, 1)
+      }
+    }
+
+    const newMemory: Memory = {
+      id: generateMemoryId(),
+      title: action.params.title.trim(),
+      content: action.params.content.trim(),
+      summary: action.params.summary.trim(),
+      keywords: action.params.keywords.trim(),
+      pinned: action.params.pinned === true || action.params.pinned === 'true',
+      createdBy: userId,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      source: 'hub'
+    }
+    memories.push(newMemory)
+    await db.set('memories:all', memories)
+
+    const memoryResult = { success: true, message: `Memory "${newMemory.title}" saved.` }
+    if (config.loggingEnabled ?? true) {
+      await logAction(db, actionId, userId, action, memoryResult, true, 'hub')
+    }
+    return { ok: true, approved: true, result: memoryResult }
+  }
+
+  // Handle delete_memory locally (not via bot bridge)
+  if (action.type === 'delete_memory') {
+    const { memoryId } = action.params
+    if (!memoryId) {
+      const errorResult = { success: false, message: '', error: 'Missing memoryId.' }
+      if (config.loggingEnabled ?? true) {
+        await logAction(db, actionId, userId, action, errorResult, true, 'hub')
+      }
+      return { ok: true, approved: true, result: errorResult }
+    }
+
+    const memories = (await db.get('memories:all') as Memory[]) || []
+    const filtered = memories.filter(m => m.id !== memoryId)
+
+    if (filtered.length === memories.length) {
+      const errorResult = { success: false, message: '', error: 'Memory not found.' }
+      if (config.loggingEnabled ?? true) {
+        await logAction(db, actionId, userId, action, errorResult, true, 'hub')
+      }
+      return { ok: true, approved: true, result: errorResult }
+    }
+
+    await db.set('memories:all', filtered)
+
+    const deleteResult = { success: true, message: 'Memory deleted.' }
+    if (config.loggingEnabled ?? true) {
+      await logAction(db, actionId, userId, action, deleteResult, true, 'hub')
+    }
+    return { ok: true, approved: true, result: deleteResult }
   }
 
   // Execute action via bot bridge

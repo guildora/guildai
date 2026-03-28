@@ -1,8 +1,10 @@
 import { ACTION_TYPES } from './actionTypes'
 import { getDocsSection } from './docsContent'
 import type { Skill } from './skillTypes'
+import type { Memory } from './memoryTypes'
+import { buildMemoriesSection, getMemoryInstructions } from './memoryPrompt'
 
-export function buildSystemPrompt(config: Record<string, any>, guildId: string, options?: { hasGifApi?: boolean; skills?: Skill[]; allowedActions?: string[]; communityRoster?: string }): string {
+export function buildSystemPrompt(config: Record<string, any>, guildId: string, options?: { hasGifApi?: boolean; skills?: Skill[]; allowedActions?: string[]; communityRoster?: string; memories?: Memory[] }): string {
   const readOnly = config.readOnlyMode ?? false
 
   // If allowedActions is provided (from permissions matrix), use those; otherwise show all actions
@@ -91,7 +93,7 @@ SECURITY:
 HELPFULNESS:
 If the user asks questions about GuildAI, the Guildora platform, how to configure settings, or how features work, answer them based on the following knowledge. Be helpful and concise.
 
-${getDocsSection()}${options?.communityRoster ? `\n\nCOMMUNITY ROSTER (current members and their roles):\nUse this to answer questions about who has which role. Do not dump the full roster unprompted.\n${options.communityRoster}` : ''}${config.customContext ? `\n\nCUSTOM CONTEXT (provided by the server admin):\n${config.customContext}` : ''}${buildSkillsSection(options?.skills)}`
+${getDocsSection()}${options?.communityRoster ? `\n\nCOMMUNITY ROSTER (current members and their roles):\nUse this to answer questions about who has which role. Do not dump the full roster unprompted.\n${options.communityRoster}` : ''}${config.customContext ? `\n\nCUSTOM CONTEXT (provided by the server admin):\n${config.customContext}` : ''}${buildSkillsSection(options?.skills)}${getMemoryInstructions()}${buildMemoriesSection(options?.memories)}`
 }
 
 function buildSkillsSection(skills?: Skill[]): string {
