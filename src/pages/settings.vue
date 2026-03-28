@@ -254,6 +254,14 @@
               <span class="field__hint">{{ t('settings.channel.maxMessagesHint') }}</span>
             </div>
 
+            <div class="field">
+              <label class="field__label">{{ t('settings.channel.imageRecognition') }}</label>
+              <label class="checkbox-field" for="imageRecognitionEnabled">
+                <input id="imageRecognitionEnabled" type="checkbox" v-model="form.imageRecognitionEnabled" class="checkbox-field__input" />
+                <span class="checkbox-field__label">{{ t('settings.channel.imageRecognitionDesc') }}</span>
+              </label>
+            </div>
+
             <p class="text-xs text-[var(--color-text-tertiary)]">{{ t('settings.channel.safeActionsHint') }}</p>
 
             <div class="flex items-center gap-3">
@@ -341,6 +349,7 @@ const form = ref({
   customContext: config.value?.customContext ?? '',
   customPersonality: config.value?.customPersonality ?? '',
   discordMaxMessages: config.value?.discordMaxMessages ?? 10,
+  imageRecognitionEnabled: config.value?.imageRecognitionEnabled ?? true,
   klipyApiKey: '',
   aiChatChannelId: config.value?.aiChatChannelId ?? '',
   aiChatChannelAutoExecuteActions: config.value?.aiChatChannelAutoExecuteActions ?? true,

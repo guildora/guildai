@@ -43,6 +43,7 @@ export default defineEventHandler(async (event) => {
     customContext: config.customContext ?? '',
     customPersonality: config.customPersonality ?? '',
     discordMaxMessages: config.discordMaxMessages ?? 10,
+    imageRecognitionEnabled: config.imageRecognitionEnabled ?? true,
     aiChatChannelId: config.aiChatChannelId ?? '',
     klipyApiKeySet: !!klipyApiKey,
     klipyApiKeyMasked: maskedKlipyKey,

@@ -107,7 +107,7 @@ export default defineEventHandler(async (event) => {
     'rateLimitPerMinute', 'rateLimitPerRole', 'confirmationTimeout',
     'allowedSkillPageRoles', 'allowedSkillManageRoles', 'allowedSkillCreateRoles',
     'actionPermissions', 'promptCachingEnabled', 'readOnlyMode', 'loggingEnabled',
-    'customContext', 'customPersonality', 'discordMaxMessages', 'aiChatChannelId'
+    'customContext', 'customPersonality', 'discordMaxMessages', 'imageRecognitionEnabled', 'aiChatChannelId'
   ]
 
   for (const key of configKeys) {

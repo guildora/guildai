@@ -4,7 +4,7 @@ export interface AiCallerOptions {
   model: string
   maxTokens: number
   systemPrompt: string
-  messages: Array<{ role: 'user' | 'assistant'; content: string }>
+  messages: Array<{ role: 'user' | 'assistant'; content: string | Array<any> }>
   promptCaching?: boolean
 }
 
