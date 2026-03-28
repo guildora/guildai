@@ -246,6 +246,18 @@
             </div>
 
             <p class="text-xs text-[var(--color-text-tertiary)]">{{ t('settings.channel.safeActionsHint') }}</p>
+
+            <div class="flex items-center gap-3">
+              <button
+                type="button"
+                class="btn btn--secondary text-sm"
+                :disabled="resettingConv || !form.aiChatChannelId"
+                @click="resetChannelConversation"
+              >
+                {{ resettingConv ? t('settings.channel.resetting') : t('settings.channel.resetConversation') }}
+              </button>
+              <span v-if="convResetSuccess" class="text-xs text-green-400">{{ t('settings.channel.resetSuccess') }}</span>
+            </div>
           </div>
       </div>
 
@@ -373,6 +385,22 @@ const allowedSkillManageRolesArray = csvComputed('allowedSkillManageRoles')
 const saving = ref(false)
 const saveSuccess = ref(false)
 const saveError = ref(false)
+const resettingConv = ref(false)
+const convResetSuccess = ref(false)
+
+async function resetChannelConversation() {
+  resettingConv.value = true
+  convResetSuccess.value = false
+  try {
+    await $fetch('/api/apps/guildai/channel-conv', { method: 'DELETE' })
+    convResetSuccess.value = true
+    setTimeout(() => { convResetSuccess.value = false }, 3000)
+  } catch {
+    // ignore
+  } finally {
+    resettingConv.value = false
+  }
+}
 
 const mcpTokenDisplay = computed(() => {
   if (regenToken.value) return regenToken.value

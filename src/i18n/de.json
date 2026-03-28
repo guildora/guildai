@@ -155,7 +155,10 @@
       "channelIdHint": "Discord-Kanal-ID eingeben, in dem der Bot auf Nachrichten antworten soll. Leer lassen zum Deaktivieren.",
       "maxMessages": "Kontext-Nachrichten",
       "maxMessagesHint": "Maximale Anzahl an Nachrichten-Paaren im Discord-Chat-Kontext bevor zusammengefasst wird (Standard: 10).",
-      "safeActionsHint": "Sichere Aktionen (Rolle zuweisen/entfernen, Kanal erstellen, Nachricht senden) werden automatisch ausgeführt. Destruktive Aktionen (Kick, Ban, Löschen) erfordern den GuildAI Hub."
+      "safeActionsHint": "Welche Aktionen im Discord-Kanal ausgeführt werden können, wird über die Berechtigungsmatrix gesteuert.",
+      "resetConversation": "Konversation zurücksetzen",
+      "resetting": "Wird zurückgesetzt...",
+      "resetSuccess": "Konversation zurückgesetzt."
     },
     "mcp": {
       "heading": "MCP-Server",

@@ -122,6 +122,15 @@ export default defineEventHandler(async (event) => {
 
   await event.context.guildora.saveConfig(configToSave)
 
+  // Mirror config to KV store so bot hooks can read fresh config without restart
+  await db.set('config:current', configToSave)
+
+  // Reset Discord channel conversation so the bot starts fresh with new settings
+  const activeChannelId = (body.aiChatChannelId ?? config.aiChatChannelId) as string | undefined
+  if (activeChannelId) {
+    await db.delete(`channel-conv:${activeChannelId}`)
+  }
+
   // Send introduction message if AI chat channel was set or changed
   const newChannelId = body.aiChatChannelId as string | undefined
   const previousChannelId = (config.aiChatChannelId as string) || ''

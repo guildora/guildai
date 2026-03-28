@@ -64,6 +64,7 @@
     { "method": "POST", "path": "/api/apps/guildai/skills", "handler": "src/api/skills.post.ts", "requiredRoles": ["admin"] },
     { "method": "PUT", "path": "/api/apps/guildai/skills", "handler": "src/api/skills.put.ts", "requiredRoles": ["admin"] },
     { "method": "DELETE", "path": "/api/apps/guildai/skills", "handler": "src/api/skills.delete.ts", "requiredRoles": ["admin"] },
+    { "method": "DELETE", "path": "/api/apps/guildai/channel-conv", "handler": "src/api/channel-conv.delete.ts", "requiredRoles": ["admin"] },
     { "method": "GET", "path": "/api/apps/guildai/mcp/tools", "handler": "src/api/mcp/tools.get.ts" },
     { "method": "POST", "path": "/api/apps/guildai/mcp/call", "handler": "src/api/mcp/call.post.ts" }
   ],

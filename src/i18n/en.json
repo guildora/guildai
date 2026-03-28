@@ -155,7 +155,10 @@
       "channelIdHint": "Enter the Discord channel ID where the bot should respond to messages. Leave empty to disable.",
       "maxMessages": "Context Messages",
       "maxMessagesHint": "Maximum number of message pairs kept in Discord chat context before summarization (default: 10).",
-      "safeActionsHint": "Safe actions (assign/remove role, create channel, send message) are executed automatically. Destructive actions (kick, ban, delete) require the GuildAI Hub."
+      "safeActionsHint": "Which actions can be executed in the Discord channel is controlled by the permissions matrix.",
+      "resetConversation": "Reset Conversation",
+      "resetting": "Resetting...",
+      "resetSuccess": "Conversation reset."
     },
     "mcp": {
       "heading": "MCP Server",
