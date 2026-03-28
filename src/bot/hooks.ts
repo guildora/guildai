@@ -35,9 +35,11 @@ interface BotContext {
 const MAX_DISCORD_LENGTH = 2000
 const DEFAULT_DISCORD_MAX_MESSAGES = 10
 const SUMMARIZE_AFTER_PAIRS = 3
-const SAFE_ACTIONS = ['assign_role', 'remove_role', 'create_channel', 'send_message', 'create_skill']
-const DESTRUCTIVE_ACTIONS = ['kick_user', 'ban_user', 'delete_channel', 'delete_message', 'move_channel']
-const ALL_KNOWN_ACTIONS = [...SAFE_ACTIONS, ...DESTRUCTIVE_ACTIONS]
+const ALL_KNOWN_ACTIONS = [
+  'assign_role', 'remove_role', 'kick_user', 'ban_user',
+  'create_channel', 'rename_channel', 'move_channel', 'delete_channel',
+  'send_message', 'delete_message', 'create_skill'
+]
 const ACTION_PATTERN = /\[ACTION:\s*(\w+)\]\s*(\{[^}]+\})/g
 const MEDIA_PATTERN = /\[(GIF|STICKER|CLIP):\s*([^\]]+)\]/g
 
@@ -101,13 +103,12 @@ function resolveDiscordPermissions(
       for (const a of discordActions) actionSet.add(a)
     }
 
-    const enabled = parseCSVInline(config.enabledActions as string ?? '')
     const actions = [...actionSet]
-    // Expand wildcard and filter against enabledActions ceiling
+    // Expand wildcard — actionPermissions is the source of truth
     if (actions.includes('*')) {
-      return { blocked: false, allowedActions: enabled.length > 0 ? enabled : ALL_KNOWN_ACTIONS }
+      return { blocked: false, allowedActions: ALL_KNOWN_ACTIONS }
     }
-    return { blocked: false, allowedActions: enabled.length > 0 ? actions.filter(a => enabled.includes(a)) : actions }
+    return { blocked: false, allowedActions: actions }
   }
 
   // Legacy fallback
@@ -115,12 +116,9 @@ function resolveDiscordPermissions(
   if (!allowedChatRoles.includes(role)) {
     return { blocked: role === 'temporaer', allowedActions: [] }
   }
-  // In legacy mode, discord uses SAFE_ACTIONS for chat-allowed roles
+  // In legacy mode, discord uses all enabled actions
   const enabled = parseCSVInline(config.enabledActions as string ?? '')
-  const safeLegacy = enabled.length > 0
-    ? SAFE_ACTIONS.filter(a => enabled.includes(a))
-    : SAFE_ACTIONS
-  return { blocked: false, allowedActions: safeLegacy }
+  return { blocked: false, allowedActions: enabled.length > 0 ? enabled : ALL_KNOWN_ACTIONS }
 }
 
 function parseCSVInline(value: string): string[] {
@@ -170,7 +168,7 @@ AVAILABLE ACTIONS:
 
 - create_skill: Create a new custom skill in the Skill Library
 
-In the Discord channel, only safe actions (assign_role, remove_role, create_channel, rename_channel, send_message, create_skill) are auto-executed. Destructive actions must be confirmed in the Hub.
+In the Discord channel, actions are executed based on the user's permission role. The permissions matrix (configurable in the Hub) determines which actions each role can perform on Discord. Actions not permitted on Discord must be done in the Hub.
 
 SKILL LIBRARY:
 GuildAI supports custom skills. Skills are reusable prompt templates with a name, trigger phrase, and content (Markdown instructions).
@@ -546,8 +544,29 @@ async function executeActionInline(
     }
 
     case 'move_channel': {
-      const { channelId, parentId } = action.params
-      if (!channelId || !parentId) return { success: false, message: de ? 'Fehlende Parameter (channelId/parentId).' : 'Missing parameters (channelId/parentId).' }
+      let { channelId, channelName, parentId, categoryName } = action.params
+      // Resolve channel name
+      if (!channelId && channelName) {
+        const resolved = await resolveChannelByName(bot, channelName)
+        if (!resolved) return { success: false, message: de ? `Kanal "${channelName}" nicht gefunden.` : `Channel "${channelName}" not found.` }
+        if ('ambiguous' in resolved) {
+          const options = resolved.ambiguous.map(c => `<#${c.id}>`).join(', ')
+          return { success: false, message: de ? `Mehrere Kanäle gefunden: ${options}` : `Multiple channels found: ${options}` }
+        }
+        channelId = resolved.id
+      }
+      if (!channelId) return { success: false, message: de ? 'Fehlende Parameter (channelId oder channelName).' : 'Missing parameters (channelId or channelName).' }
+      // Resolve category name to parentId
+      if (!parentId && categoryName) {
+        const resolved = await resolveChannelByName(bot, categoryName)
+        if (!resolved) return { success: false, message: de ? `Kategorie "${categoryName}" nicht gefunden.` : `Category "${categoryName}" not found.` }
+        if ('ambiguous' in resolved) {
+          const options = resolved.ambiguous.map(c => `<#${c.id}>`).join(', ')
+          return { success: false, message: de ? `Mehrere Kategorien gefunden: ${options}` : `Multiple categories found: ${options}` }
+        }
+        parentId = resolved.id
+      }
+      if (!parentId) return { success: false, message: de ? 'Fehlende Parameter (parentId oder categoryName).' : 'Missing parameters (parentId or categoryName).' }
       await botRequest(`/internal/guild/channels/${encodeURIComponent(channelId)}`, {
         method: 'PATCH',
         body: { parentId }
@@ -613,18 +632,19 @@ function buildChannelSystemPrompt(
   const ACTION_DESCRIPTIONS: Record<string, string> = {
     assign_role: '- [ACTION: assign_role] {"userId": "...", "roleId": "..."} : Assign a role to a member',
     remove_role: '- [ACTION: remove_role] {"userId": "...", "roleId": "..."} : Remove a role from a member',
-    create_channel: '- [ACTION: create_channel] {"name": "...", "type": "text|voice"} : Create a new channel',
-    send_message: '- [ACTION: send_message] {"channelName": "...", "content": "..."} : Send a message to a channel (use channelName with the channel name, or channelId if you have the ID)',
+    create_channel: '- [ACTION: create_channel] {"name": "...", "type": "text|voice|category"} : Create a new channel or category',
+    rename_channel: '- [ACTION: rename_channel] {"channelName": "...", "name": "..."} : Rename a channel (use plain channel name, Unicode is auto-normalized)',
+    move_channel: '- [ACTION: move_channel] {"channelName": "...", "categoryName": "..."} : Move a channel to a category (use plain names, Unicode is auto-normalized)',
+    send_message: '- [ACTION: send_message] {"channelName": "...", "content": "..."} : Send a message to a channel (use plain channel name, Unicode is auto-normalized)',
     create_skill: '- [ACTION: create_skill] {"name": "...", "trigger": "...", "content": "..."} : Create a new custom skill in the Skill Library',
     kick_user: '- [ACTION: kick_user] {"userId": "...", "reason": "..."} : Kick a user from the server',
     ban_user: '- [ACTION: ban_user] {"userId": "...", "reason": "..."} : Ban a user from the server',
-    delete_channel: '- [ACTION: delete_channel] {"channelId": "..."} : Delete a Discord channel',
-    delete_message: '- [ACTION: delete_message] {"channelId": "...", "messageId": "..."} : Delete a message from a channel',
-    move_channel: '- [ACTION: move_channel] {"channelId": "...", "parentId": "..."} : Move a channel to a category'
+    delete_channel: '- [ACTION: delete_channel] {"channelName": "..."} : Delete a Discord channel (use plain channel name)',
+    delete_message: '- [ACTION: delete_message] {"channelName": "...", "messageId": "..."} : Delete a message from a channel (use plain channel name)'
   }
 
-  // Use allowedActions if provided, otherwise fall back to SAFE_ACTIONS
-  const effectiveActions = options?.allowedActions ?? SAFE_ACTIONS
+  // Use allowedActions if provided, otherwise fall back to all known actions
+  const effectiveActions = options?.allowedActions ?? ALL_KNOWN_ACTIONS
   const actionList = effectiveActions
     .map(a => ACTION_DESCRIPTIONS[a] || '')
     .filter(Boolean)
@@ -896,6 +916,12 @@ async function summarizeOldMessages(
 exports.onMessage = async function onMessage(payload: MessagePayload, ctx: BotContext) {
   const { channelId, memberId, content, guildId } = payload
 
+  // Read fresh config from KV store (mirrors config saved by Hub settings)
+  const freshConfig = (await ctx.db.get('config:current')) as Record<string, unknown> | null
+  if (freshConfig && Object.keys(freshConfig).length > 0) {
+    Object.assign(ctx.config, freshConfig)
+  }
+
   // Only respond in the configured AI chat channel
   const configuredChannel = ctx.config.aiChatChannelId as string
   if (!configuredChannel || channelId !== configuredChannel) return
@@ -1039,60 +1065,73 @@ exports.onMessage = async function onMessage(payload: MessagePayload, ctx: BotCo
           `An admin can disable read-only mode in the **GuildAI Settings**.`
       )
     } else {
-      // Extract media markers before stripping
-      const mediaMatches: Array<{ type: string; query: string }> = []
-      if (klipyApiKey) {
-        let mediaMatch
-        const mediaRegex = /\[(GIF|STICKER|CLIP):\s*([^\]]+)\]/g
-        while ((mediaMatch = mediaRegex.exec(aiResponse)) !== null) {
-          mediaMatches.push({ type: mediaMatch[1], query: mediaMatch[2] })
-        }
-      }
+      // Check if any actions are blocked (user lacks permission on Discord)
+      const blockedActions = actions.filter(a =>
+        !userPerms.allowedActions.includes(a.type) && !userPerms.allowedActions.includes('*') && ALL_KNOWN_ACTIONS.includes(a.type)
+      )
 
-      // Strip action and media markers from the visible response
-      let responseText = stripActionMarkers(aiResponse)
-      responseText = stripMediaMarkers(responseText)
-
-      // Send the AI text response first (without markers)
-      if (responseText) {
-        const chunks = splitMessage(responseText)
-        for (const chunk of chunks) {
-          await ctx.bot.sendMessage(channelId, chunk)
-        }
-      }
-
-      // Send media (GIFs/stickers/clips) after text
-      for (const media of mediaMatches) {
-        const mediaUrl = await searchMedia(klipyApiKey, media.type, media.query, lang)
-        if (mediaUrl) {
-          await ctx.bot.sendMessage(channelId, mediaUrl)
-        }
-      }
-
-      // Process actions (only when not in read-only mode)
-      for (const action of actions) {
-        if (userPerms.allowedActions.includes(action.type) || userPerms.allowedActions.includes('*')) {
-          // User has permission for this action on discord - execute directly
-          try {
-            const result = await executeActionInline(action, ctx.bot, ctx.db, lang)
-            if (result.success) {
-              await ctx.bot.sendMessage(channelId, `> ✅ ${result.message}`)
-            } else {
-              await ctx.bot.sendMessage(channelId, `> ❌ ${result.message}`)
-            }
-            if (ctx.config.loggingEnabled ?? true) {
-              await logActionEntry(ctx.db, memberId, action, result, 'discord')
-            }
-          } catch (err: any) {
-            await ctx.bot.sendMessage(channelId, de
-              ? `> ❌ Aktion fehlgeschlagen: ${err.message || 'Unbekannter Fehler'}`
-              : `> ❌ Action failed: ${err.message || 'Unknown error'}`)
+      if (blockedActions.length > 0 && blockedActions.length === actions.length) {
+        // ALL actions are blocked — suppress AI text (which likely claims success)
+        // and send a natural-sounding response instead
+        await ctx.bot.sendMessage(channelId, de
+          ? 'Sorry, das kann ich leider nicht machen. Du hast nicht die nötigen Berechtigungen dafür.'
+          : "Sorry, I can't do that. You don't have the required permissions for this.")
+      } else {
+        // Extract media markers before stripping
+        const mediaMatches: Array<{ type: string; query: string }> = []
+        if (klipyApiKey) {
+          let mediaMatch
+          const mediaRegex = /\[(GIF|STICKER|CLIP):\s*([^\]]+)\]/g
+          while ((mediaMatch = mediaRegex.exec(aiResponse)) !== null) {
+            mediaMatches.push({ type: mediaMatch[1], query: mediaMatch[2] })
           }
-        } else if (ALL_KNOWN_ACTIONS.includes(action.type)) {
-          // Known action but user doesn't have permission on discord
-          await ctx.bot.sendMessage(channelId, de
-            ? `> ⚠️ Die Aktion \`${action.type}\` kann nur im **GuildAI Hub** ausgeführt werden.`
-            : `> ⚠️ The action \`${action.type}\` can only be executed in the **GuildAI Hub**.`)
+        }
+
+        // Strip action and media markers from the visible response
+        let responseText = stripActionMarkers(aiResponse)
+        responseText = stripMediaMarkers(responseText)
+
+        // Send the AI text response first (without markers)
+        if (responseText) {
+          const chunks = splitMessage(responseText)
+          for (const chunk of chunks) {
+            await ctx.bot.sendMessage(channelId, chunk)
+          }
+        }
+
+        // Send media (GIFs/stickers/clips) after text
+        for (const media of mediaMatches) {
+          const mediaUrl = await searchMedia(klipyApiKey, media.type, media.query, lang)
+          if (mediaUrl) {
+            await ctx.bot.sendMessage(channelId, mediaUrl)
+          }
+        }
+
+        // Process actions (only when not in read-only mode)
+        for (const action of actions) {
+          if (userPerms.allowedActions.includes(action.type) || userPerms.allowedActions.includes('*')) {
+            // User has permission for this action on discord - execute directly
+            try {
+              const result = await executeActionInline(action, ctx.bot, ctx.db, lang)
+              if (result.success) {
+                await ctx.bot.sendMessage(channelId, `> ✅ ${result.message}`)
+              } else {
+                await ctx.bot.sendMessage(channelId, `> ❌ ${result.message}`)
+              }
+              if (ctx.config.loggingEnabled ?? true) {
+                await logActionEntry(ctx.db, memberId, action, result, 'discord')
+              }
+            } catch (err: any) {
+              await ctx.bot.sendMessage(channelId, de
+                ? `> ❌ Aktion fehlgeschlagen: ${err.message || 'Unbekannter Fehler'}`
+                : `> ❌ Action failed: ${err.message || 'Unknown error'}`)
+            }
+          } else if (ALL_KNOWN_ACTIONS.includes(action.type)) {
+            // Known action but user doesn't have permission on discord
+            await ctx.bot.sendMessage(channelId, de
+              ? '> Das kann ich leider nicht machen. Dir fehlen die Berechtigungen dafür.'
+              : "> I can't do that. You don't have the required permissions.")
+          }
         }
       }
     }
