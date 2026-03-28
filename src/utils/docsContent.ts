@@ -56,7 +56,6 @@ CONFIGURATION:
 - Rate Limit (rateLimitPerMinute): Max messages per user per minute (default: 10)
 - Role-specific Rate Limits (rateLimitPerRole): JSON object, e.g. {"user": 5, "moderator": 20, "admin": 50}
 - Confirmation Timeout (confirmationTimeout): Seconds before a pending action expires (default: 60)
-- Enabled Actions (enabledActions): Comma-separated action types the AI may propose
 - Read-Only Mode (readOnlyMode): When enabled, actions are simulated but not executed:useful for testing
 - Action Logging (loggingEnabled): Log all executed actions with 90-day retention
 - AI Chat Channel ID (aiChatChannelId): Discord channel ID for direct bot chat. Leave empty to disable.

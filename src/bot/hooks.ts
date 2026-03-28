@@ -91,8 +91,7 @@ function resolveDiscordPermissions(
 ): { blocked: boolean; allowedActions: string[] } {
   if (!role) return { blocked: true, allowedActions: [] }
   if (role === 'superadmin') {
-    const enabled = parseCSVInline(config.enabledActions as string ?? '')
-    return { blocked: false, allowedActions: enabled.length > 0 ? enabled : ALL_KNOWN_ACTIONS }
+    return { blocked: false, allowedActions: ALL_KNOWN_ACTIONS }
   }
 
   // New config: actionPermissions
@@ -125,9 +124,8 @@ function resolveDiscordPermissions(
   if (!allowedChatRoles.includes(role)) {
     return { blocked: role === 'temporaer', allowedActions: [] }
   }
-  // In legacy mode, discord uses all enabled actions
-  const enabled = parseCSVInline(config.enabledActions as string ?? '')
-  return { blocked: false, allowedActions: enabled.length > 0 ? enabled : ALL_KNOWN_ACTIONS }
+  // In legacy mode, discord uses all actions (permissions matrix is source of truth)
+  return { blocked: false, allowedActions: ALL_KNOWN_ACTIONS }
 }
 
 function parseCSVInline(value: string): string[] {
@@ -238,7 +236,6 @@ CONFIGURATION:
 - Rate Limit (rateLimitPerMinute): Max messages per user per minute (default: 10)
 - Role-specific Rate Limits (rateLimitPerRole): JSON object, e.g. {"user": 5, "moderator": 20, "admin": 50}
 - Confirmation Timeout (confirmationTimeout): Seconds before a pending action expires (default: 60)
-- Enabled Actions (enabledActions): Comma-separated action types the AI may propose
 - Read-Only Mode (readOnlyMode): When enabled, actions are simulated but not executed. Useful for testing
 - Action Logging (loggingEnabled): Log all executed actions with 90-day retention
 - AI Chat Channel ID (aiChatChannelId): Discord channel ID for direct bot chat. Leave empty to disable.
@@ -514,10 +511,10 @@ async function executeActionInline(
     }
 
     case 'create_channel': {
-      const { name, type } = action.params
+      const { name, type, topic } = action.params
       if (!name) return { success: false, message: de ? 'Fehlender Parameter (name).' : 'Missing parameter (name).' }
       const result = await botRequest('/internal/guild/channels/create', {
-        body: { name, type: type || 'text' }
+        body: { name, type: type || 'text', topic: topic || undefined }
       })
       return { success: true, message: de ? `Kanal "${result.channelName || name}" erstellt.` : `Channel "${result.channelName || name}" created.` }
     }

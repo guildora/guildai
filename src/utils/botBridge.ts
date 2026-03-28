@@ -88,12 +88,6 @@ export async function executeAction(
     return { success: false, message: '', error: `Unknown action type: ${action.type}` }
   }
 
-  // Whitelist check
-  const enabledActions = (config.enabledActions as string || '').split(',').map(s => s.trim()).filter(Boolean)
-  if (!enabledActions.includes(action.type)) {
-    return { success: false, message: '', error: 'Action not enabled in settings.' }
-  }
-
   // Read-only mode
   if (config.readOnlyMode) {
     return {
@@ -141,10 +135,10 @@ export async function executeAction(
       }
 
       case 'create_channel': {
-        const { name, type } = action.params
+        const { name, type, topic } = action.params
         if (!name) return { success: false, message: '', error: 'Missing channel name.' }
         const result = await botRequest('/internal/guild/channels/create', {
-          body: { name, type: type || 'text' }
+          body: { name, type: type || 'text', topic: topic || undefined }
         })
         return { success: true, message: `Channel "${result.channelName}" created (ID: ${result.channelId}).` }
       }

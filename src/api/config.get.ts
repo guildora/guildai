@@ -33,7 +33,6 @@ export default defineEventHandler(async (event) => {
     rateLimitPerMinute: config.rateLimitPerMinute ?? 10,
     rateLimitPerRole: config.rateLimitPerRole ?? '{}',
     confirmationTimeout: config.confirmationTimeout ?? 60,
-    enabledActions: config.enabledActions ?? 'assign_role,remove_role,kick_user,ban_user,create_channel,delete_channel,move_channel,send_message,delete_message,create_skill',
     allowedSkillPageRoles: config.allowedSkillPageRoles ?? 'moderator,admin,superadmin',
     allowedSkillManageRoles: config.allowedSkillManageRoles ?? 'admin,superadmin',
     allowedSkillCreateRoles: config.allowedSkillCreateRoles ?? 'admin,superadmin',

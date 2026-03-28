@@ -25,8 +25,7 @@ export default defineEventHandler(async (event) => {
   }
 
   // Resolve allowed actions for this user on the hub platform
-  const enabledActionsList = ((config.enabledActions as string) || '').split(',').map((s: string) => s.trim()).filter(Boolean)
-  const userAllowedActions = getAllowedActions(permissions, userRoles, 'hub', enabledActionsList)
+  const userAllowedActions = getAllowedActions(permissions, userRoles, 'hub')
 
   // Check API key (stored separately in KV store)
   const apiKey = await db.get('secrets:apiKey')

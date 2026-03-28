@@ -3,13 +3,12 @@ import { getDocsSection } from './docsContent'
 import type { Skill } from './skillTypes'
 
 export function buildSystemPrompt(config: Record<string, any>, guildId: string, options?: { hasGifApi?: boolean; skills?: Skill[]; allowedActions?: string[]; communityRoster?: string }): string {
-  const enabledActions = (config.enabledActions as string || '').split(',').map(s => s.trim()).filter(Boolean)
   const readOnly = config.readOnlyMode ?? false
 
-  // If allowedActions is provided, only show those actions (intersection with enabledActions)
+  // If allowedActions is provided (from permissions matrix), use those; otherwise show all actions
   const effectiveActions = options?.allowedActions !== undefined
-    ? options.allowedActions.filter(a => enabledActions.includes(a))
-    : enabledActions
+    ? options.allowedActions
+    : Object.keys(ACTION_TYPES)
 
   const actionList = effectiveActions
     .filter(a => a in ACTION_TYPES)

@@ -70,7 +70,7 @@ export function resolvePermissions(config: Record<string, unknown>): ActionPermi
   // Legacy fallback: build from old config keys
   const allowedChatRoles = parseCSV(config.allowedChatRoles as string ?? 'moderator,admin,superadmin')
   const allowedActionRoles = parseCSV(config.allowedActionRoles as string ?? 'admin,superadmin')
-  const enabledActions = parseCSV(config.enabledActions as string ?? '')
+  const allActions = Object.keys(ACTION_TYPES)
 
   const allRoles = ['temporaer', 'user', 'moderator', 'admin', 'superadmin']
 
@@ -82,18 +82,16 @@ export function resolvePermissions(config: Record<string, unknown>): ActionPermi
     }
 
     if (!allowedChatRoles.includes(role)) {
-      // Not in allowed chat roles: no chat access, no actions (but not "blocked")
-      // In legacy mode, temporaer was never explicitly blocked, but let's default it
       result[role] = {
         blocked: role === 'temporaer',
         actions: { hub: [], discord: [] }
       }
     } else if (allowedActionRoles.includes(role)) {
-      // Can chat AND confirm actions — same actions on both platforms
+      // Can chat AND confirm actions — all actions on both platforms
       result[role] = {
         actions: {
-          hub: enabledActions,
-          discord: enabledActions
+          hub: allActions,
+          discord: allActions
         }
       }
     } else {
@@ -134,8 +132,7 @@ export function canChat(permissions: ActionPermissions, userRoles: string[]): bo
 export function getAllowedActions(
   permissions: ActionPermissions,
   userRoles: string[],
-  platform: Platform,
-  enabledActions: string[]
+  platform: Platform
 ): string[] {
   if (userRoles.includes('superadmin')) return expandWildcard(['*'])
 
@@ -166,10 +163,9 @@ export function canExecuteAction(
   permissions: ActionPermissions,
   userRoles: string[],
   platform: Platform,
-  actionType: string,
-  enabledActions: string[]
+  actionType: string
 ): boolean {
-  const allowed = getAllowedActions(permissions, userRoles, platform, enabledActions)
+  const allowed = getAllowedActions(permissions, userRoles, platform)
   return allowed.includes(actionType)
 }
 

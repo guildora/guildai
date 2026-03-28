@@ -336,7 +336,6 @@ const form = ref({
   rateLimitPerMinute: config.value?.rateLimitPerMinute ?? 10,
   rateLimitPerRole: config.value?.rateLimitPerRole ?? '{}',
   confirmationTimeout: config.value?.confirmationTimeout ?? 60,
-  enabledActions: config.value?.enabledActions ?? 'assign_role,remove_role,kick_user,ban_user,create_channel,delete_channel,move_channel,send_message,delete_message,create_skill',
   readOnlyMode: config.value?.readOnlyMode ?? false,
   loggingEnabled: config.value?.loggingEnabled ?? true,
   customContext: config.value?.customContext ?? '',

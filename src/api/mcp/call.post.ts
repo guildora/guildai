@@ -30,12 +30,6 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, message: `Unknown tool: ${toolName}` })
   }
 
-  // Check if action is enabled
-  const enabledActions = (config.enabledActions as string || '').split(',').map((s: string) => s.trim()).filter(Boolean)
-  if (!enabledActions.includes(toolName)) {
-    throw createError({ statusCode: 403, message: `Tool "${toolName}" is not enabled.` })
-  }
-
   const action: ExtractedAction = {
     type: toolName,
     params: args,

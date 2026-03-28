@@ -1,11 +1,11 @@
 // GET /api/apps/guildai/mcp/tools
-// List available MCP tools based on enabled actions
+// List available MCP tools (all action types)
 // Access: token-based (validated in handler)
 
-import { ACTION_TYPES, isValidActionType } from '../../utils/actionTypes'
+import { ACTION_TYPES } from '../../utils/actionTypes'
 
 export default defineEventHandler(async (event) => {
-  const { config, db } = event.context.guildora
+  const { db } = event.context.guildora
 
   // Validate MCP token
   const authHeader = getRequestHeader(event, 'authorization') || ''
@@ -16,10 +16,9 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 401, message: 'Invalid or missing MCP token.' })
   }
 
-  const enabledActions = (config.enabledActions as string || '').split(',').map((s: string) => s.trim()).filter(Boolean)
+  const allActions = Object.keys(ACTION_TYPES)
 
-  const tools = enabledActions
-    .filter(a => isValidActionType(a))
+  const tools = allActions
     .map(actionType => {
       const def = ACTION_TYPES[actionType]
       const properties: Record<string, any> = {}

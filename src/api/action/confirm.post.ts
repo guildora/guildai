@@ -59,8 +59,7 @@ export default defineEventHandler(async (event) => {
   }
 
   // Check per-action permission
-  const enabledActionsList = ((config.enabledActions as string) || '').split(',').map((s: string) => s.trim()).filter(Boolean)
-  if (!canExecuteAction(permissions, userRoles, 'hub', action.type, enabledActionsList)) {
+  if (!canExecuteAction(permissions, userRoles, 'hub', action.type)) {
     throw createError({ statusCode: 403, message: 'You do not have permission to execute this action.' })
   }
 

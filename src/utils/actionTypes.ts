@@ -21,8 +21,8 @@ export const ACTION_TYPES: Record<string, ActionDefinition> = {
     description: 'Ban a user from the server'
   },
   create_channel: {
-    params: ['name', 'type'],
-    description: 'Create a new Discord channel'
+    params: ['name', 'type', 'topic'],
+    description: 'Create a new Discord channel (topic sets the channel description)'
   },
   delete_channel: {
     params: ['channelName'],
@@ -30,7 +30,7 @@ export const ACTION_TYPES: Record<string, ActionDefinition> = {
   },
   rename_channel: {
     params: ['channelName', 'name'],
-    description: 'Rename a Discord channel (use channelName or channelId)'
+    description: 'Rename an existing Discord channel. Use channelName to find it and name for the new name'
   },
   move_channel: {
     params: ['channelName', 'categoryName'],
