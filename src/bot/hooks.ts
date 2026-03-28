@@ -40,8 +40,17 @@ const ALL_KNOWN_ACTIONS = [
   'create_channel', 'rename_channel', 'move_channel', 'delete_channel',
   'send_message', 'delete_message', 'create_skill'
 ]
-const ACTION_PATTERN = /\[ACTION:\s*(\w+)\]\s*(\{[^}]+\})/g
 const MEDIA_PATTERN = /\[(GIF|STICKER|CLIP):\s*([^\]]+)\]/g
+
+/** Extract balanced JSON starting at the '{' found at `startIndex` in `text`. */
+function extractBalancedJson(text: string, startIndex: number): string | null {
+  let depth = 0
+  for (let i = startIndex; i < text.length; i++) {
+    if (text[i] === '{') depth++
+    else if (text[i] === '}') { depth--; if (depth === 0) return text.slice(startIndex, i + 1) }
+  }
+  return null
+}
 
 const MAX_CONV_AGE = 24 * 60 * 60 * 1000 // 24 hours
 const DISPLAY_NAME_CACHE_TTL = 10 * 60 * 1000 // 10 minutes
@@ -234,14 +243,18 @@ function splitMessage(text: string): string[] {
 
 function extractActions(text: string): Array<{ type: string; params: Record<string, string>; rawText: string }> {
   const actions: Array<{ type: string; params: Record<string, string>; rawText: string }> = []
-  const pattern = /\[ACTION:\s*(\w+)\]\s*(\{[^}]+\})/g
+  const tagPattern = /\[ACTION:\s*(\w+)\]\s*\{/g
   let match: RegExpExecArray | null
 
-  while ((match = pattern.exec(text)) !== null) {
+  while ((match = tagPattern.exec(text)) !== null) {
+    const jsonStart = match.index + match[0].length - 1 // position of '{'
+    const json = extractBalancedJson(text, jsonStart)
+    if (!json) continue
     try {
       const type = match[1]
-      const params = JSON.parse(match[2])
-      actions.push({ type, params, rawText: match[0] })
+      const params = JSON.parse(json)
+      const rawText = text.slice(match.index, jsonStart + json.length)
+      actions.push({ type, params, rawText })
     } catch {
       // Invalid JSON, skip
     }
@@ -251,7 +264,22 @@ function extractActions(text: string): Array<{ type: string; params: Record<stri
 }
 
 function stripActionMarkers(text: string): string {
-  return text.replace(ACTION_PATTERN, '').trim()
+  let result = text
+  const tagPattern = /\[ACTION:\s*\w+\]\s*\{/g
+  let match: RegExpExecArray | null
+  // Collect ranges to remove (reverse order to preserve indices)
+  const ranges: Array<[number, number]> = []
+  while ((match = tagPattern.exec(text)) !== null) {
+    const jsonStart = match.index + match[0].length - 1
+    const json = extractBalancedJson(text, jsonStart)
+    if (json) {
+      ranges.push([match.index, jsonStart + json.length])
+    }
+  }
+  for (let i = ranges.length - 1; i >= 0; i--) {
+    result = result.slice(0, ranges[i][0]) + result.slice(ranges[i][1])
+  }
+  return result.trim()
 }
 
 async function checkRateLimit(
