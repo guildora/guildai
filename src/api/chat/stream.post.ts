@@ -8,6 +8,8 @@ import { extractActions } from '../../utils/actionExtractor'
 import { checkRateLimit } from '../../utils/rateLimiter'
 import { trackUsage } from '../../utils/usageTracker'
 import { resolvePermissions, canChat, getAllowedActions } from '../../utils/permissions'
+import { buildCommunityRoster } from '../../utils/communityRoster'
+import { botRequest } from '../../utils/botBridge'
 
 export default defineEventHandler(async (event) => {
   const { guildId, userId, userRoles, config, db } = event.context.guildora
@@ -60,7 +62,8 @@ export default defineEventHandler(async (event) => {
   // Build system prompt
   const klipyApiKey = await db.get('secrets:klipyApiKey')
   const skills = (await db.get('skills:all') as any[]) || []
-  const systemPrompt = buildSystemPrompt(config, guildId, { hasGifApi: !!klipyApiKey, skills, allowedActions: userAllowedActions })
+  const communityRoster = await buildCommunityRoster(db, botRequest)
+  const systemPrompt = buildSystemPrompt(config, guildId, { hasGifApi: !!klipyApiKey, skills, allowedActions: userAllowedActions, communityRoster })
 
   // Set SSE headers
   setResponseHeader(event, 'Content-Type', 'text/event-stream')
@@ -81,10 +84,11 @@ export default defineEventHandler(async (event) => {
           model: aiModel,
           maxTokens: (config.maxTokens as number) || 2048,
           systemPrompt,
-          messages
+          messages,
+          promptCaching: config.promptCachingEnabled !== false
         })
 
-        let usageData: { inputTokens: number; outputTokens: number } | undefined
+        let usageData: { inputTokens: number; outputTokens: number; cacheCreationInputTokens: number; cacheReadInputTokens: number } | undefined
 
         for await (const chunk of aiStream) {
           if (chunk.type === 'text' && chunk.text) {
@@ -102,7 +106,7 @@ export default defineEventHandler(async (event) => {
         // Track token usage
         if (usageData) {
           try {
-            await trackUsage(db, 'hub', aiProvider, aiModel, usageData.inputTokens, usageData.outputTokens)
+            await trackUsage(db, 'hub', aiProvider, aiModel, usageData.inputTokens, usageData.outputTokens, usageData.cacheCreationInputTokens, usageData.cacheReadInputTokens)
           } catch {
             // Non-critical — don't fail the response
           }

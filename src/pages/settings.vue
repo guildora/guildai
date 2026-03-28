@@ -93,6 +93,15 @@
                 <input id="maxTokens" v-model.number="form.maxTokens" type="number" min="256" max="8192" class="field__input w-32" />
               </div>
             </div>
+
+            <div v-if="form.apiProvider === 'anthropic'" class="field">
+              <label class="field__label">{{ t('settings.provider.promptCaching') }}</label>
+              <label class="checkbox-field" for="promptCachingEnabled">
+                <input id="promptCachingEnabled" type="checkbox" v-model="form.promptCachingEnabled" class="checkbox-field__input" />
+                <span class="checkbox-field__label">{{ t('settings.provider.promptCachingDesc') }}</span>
+              </label>
+              <span class="field__hint">{{ t('settings.provider.promptCachingHint') }}</span>
+            </div>
           </div>
       </div>
 
@@ -318,6 +327,7 @@ const form = ref({
   apiKey: '',
   model: config.value?.model ?? 'claude-sonnet-4-20250514',
   maxTokens: config.value?.maxTokens ?? 2048,
+  promptCachingEnabled: config.value?.promptCachingEnabled ?? true,
   allowedChatRoles: config.value?.allowedChatRoles ?? 'moderator,admin',
   allowedActionRoles: config.value?.allowedActionRoles ?? 'admin',
   allowedSkillPageRoles: config.value?.allowedSkillPageRoles ?? 'moderator,admin,superadmin',

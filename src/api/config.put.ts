@@ -106,7 +106,7 @@ export default defineEventHandler(async (event) => {
     'apiProvider', 'model', 'maxTokens', 'allowedChatRoles', 'allowedActionRoles',
     'rateLimitPerMinute', 'rateLimitPerRole', 'confirmationTimeout',
     'allowedSkillPageRoles', 'allowedSkillManageRoles', 'allowedSkillCreateRoles',
-    'enabledActions', 'actionPermissions', 'readOnlyMode', 'loggingEnabled',
+    'enabledActions', 'actionPermissions', 'promptCachingEnabled', 'readOnlyMode', 'loggingEnabled',
     'customContext', 'customPersonality', 'discordMaxMessages', 'aiChatChannelId'
   ]
 

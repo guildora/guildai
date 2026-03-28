@@ -16,36 +16,50 @@ export default defineEventHandler(async (event) => {
   // Compute totals
   let totalInputTokens = 0
   let totalOutputTokens = 0
+  let totalCacheCreationTokens = 0
+  let totalCacheReadTokens = 0
   let totalRequests = 0
-  const bySource: Record<string, { inputTokens: number; outputTokens: number; requests: number }> = {}
-  const byModel: Record<string, { inputTokens: number; outputTokens: number; requests: number }> = {}
+  const bySource: Record<string, { inputTokens: number; outputTokens: number; cacheCreationTokens: number; cacheReadTokens: number; requests: number }> = {}
+  const byModel: Record<string, { inputTokens: number; outputTokens: number; cacheCreationTokens: number; cacheReadTokens: number; requests: number }> = {}
 
   for (const day of days) {
     totalInputTokens += day.totalInputTokens || 0
     totalOutputTokens += day.totalOutputTokens || 0
+    totalCacheCreationTokens += day.totalCacheCreationTokens || 0
+    totalCacheReadTokens += day.totalCacheReadTokens || 0
     totalRequests += day.totalRequests || 0
 
     if (day.bySource) {
       for (const [source, stats] of Object.entries(day.bySource) as any) {
-        if (!bySource[source]) bySource[source] = { inputTokens: 0, outputTokens: 0, requests: 0 }
+        if (!bySource[source]) bySource[source] = { inputTokens: 0, outputTokens: 0, cacheCreationTokens: 0, cacheReadTokens: 0, requests: 0 }
         bySource[source].inputTokens += stats.inputTokens || 0
         bySource[source].outputTokens += stats.outputTokens || 0
+        bySource[source].cacheCreationTokens += stats.cacheCreationTokens || 0
+        bySource[source].cacheReadTokens += stats.cacheReadTokens || 0
         bySource[source].requests += stats.requests || 0
       }
     }
 
     if (day.byModel) {
       for (const [model, stats] of Object.entries(day.byModel) as any) {
-        if (!byModel[model]) byModel[model] = { inputTokens: 0, outputTokens: 0, requests: 0 }
+        if (!byModel[model]) byModel[model] = { inputTokens: 0, outputTokens: 0, cacheCreationTokens: 0, cacheReadTokens: 0, requests: 0 }
         byModel[model].inputTokens += stats.inputTokens || 0
         byModel[model].outputTokens += stats.outputTokens || 0
+        byModel[model].cacheCreationTokens += stats.cacheCreationTokens || 0
+        byModel[model].cacheReadTokens += stats.cacheReadTokens || 0
         byModel[model].requests += stats.requests || 0
       }
     }
   }
 
   return {
-    totals: { inputTokens: totalInputTokens, outputTokens: totalOutputTokens, requests: totalRequests },
+    totals: {
+      inputTokens: totalInputTokens,
+      outputTokens: totalOutputTokens,
+      cacheCreationTokens: totalCacheCreationTokens,
+      cacheReadTokens: totalCacheReadTokens,
+      requests: totalRequests
+    },
     bySource,
     byModel,
     days

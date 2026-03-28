@@ -61,7 +61,7 @@ async function resolveChannelId(channelId: string | undefined, channelName: stri
   return { error: `Channel "${channelName}" not found.` }
 }
 
-async function botRequest(path: string, options: { method?: string; body?: Record<string, any> } = {}): Promise<any> {
+export async function botRequest(path: string, options: { method?: string; body?: Record<string, any> } = {}): Promise<any> {
   const response = await fetch(`${BOT_URL}${path}`, {
     method: options.method || 'POST',
     headers: {

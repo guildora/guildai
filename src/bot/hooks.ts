@@ -137,6 +137,51 @@ function parseCSVInline(value: string): string[] {
 const BOT_URL = process.env.BOT_INTERNAL_URL || 'http://localhost:3050'
 const BOT_TOKEN = process.env.BOT_INTERNAL_TOKEN || ''
 
+const ROSTER_CACHE_KEY = 'roster:guild'
+const ROSTER_CACHE_TTL = 5 * 60 * 1000 // 5 minutes
+const MAX_NAMES_PER_ROLE = 10
+const MAX_ROSTER_LENGTH = 2000
+
+async function buildRoster(db: BotContext['db']): Promise<string> {
+  try {
+    const cached = await db.get(ROSTER_CACHE_KEY) as { text: string; expiresAt: number } | null
+    if (cached && cached.expiresAt > Date.now()) return cached.text
+
+    const rolesResult = await botRequest('/internal/guild/roles', { method: 'GET' })
+    const roles: Array<{ id: string; name: string; position: number; managed: boolean }> = rolesResult?.roles || []
+    const humanRoles = roles.filter(r => !r.managed)
+
+    const lines: string[] = []
+    for (const role of humanRoles) {
+      const membersResult = await botRequest(`/internal/guild/roles/${encodeURIComponent(role.id)}/members`, { method: 'GET' })
+      const members: Array<{ displayName: string }> = membersResult?.members || []
+      if (members.length === 0) continue
+      const names = members.slice(0, MAX_NAMES_PER_ROLE).map(m => m.displayName)
+      const overflow = members.length > MAX_NAMES_PER_ROLE ? ` (and ${members.length - MAX_NAMES_PER_ROLE} more)` : ''
+      lines.push(`${role.name}: ${names.join(', ')}${overflow}`)
+    }
+
+    if (lines.length === 0) {
+      await db.set(ROSTER_CACHE_KEY, { text: '', expiresAt: Date.now() + ROSTER_CACHE_TTL })
+      return ''
+    }
+
+    let text = ''
+    for (const line of lines) {
+      if (text.length + line.length + 1 > MAX_ROSTER_LENGTH) {
+        text += '\n(additional roles omitted)'
+        break
+      }
+      text += (text ? '\n' : '') + line
+    }
+
+    await db.set(ROSTER_CACHE_KEY, { text, expiresAt: Date.now() + ROSTER_CACHE_TTL })
+    return text
+  } catch {
+    return ''
+  }
+}
+
 // Keep in sync with src/utils/docsContent.ts
 const DOCS_SECTION = `ABOUT GUILDAI & GUILDORA:
 If a user asks about how the app works, what it can do, or how to configure it, use the following knowledge to answer.
@@ -650,7 +695,7 @@ function buildChannelSystemPrompt(
   config: Record<string, unknown>,
   guildId: string,
   currentUser: { memberId: string; displayName: string },
-  options?: { hasGifApi?: boolean; skills?: Array<{ name: string; trigger: string; content: string }>; allowedActions?: string[] }
+  options?: { hasGifApi?: boolean; skills?: Array<{ name: string; trigger: string; content: string }>; allowedActions?: string[]; communityRoster?: string }
 ): string {
   const readOnly = config.readOnlyMode ?? false
   const botName = (config.botName as string) || 'GuildAI'
@@ -755,7 +800,7 @@ SECURITY:
 HELPFULNESS:
 If the user asks questions about GuildAI, the Guildora platform, how to configure settings, or how features work, answer them based on the following knowledge. Be helpful and concise.
 
-${DOCS_SECTION}${config.customContext ? `\n\nCUSTOM CONTEXT (provided by the server admin):\n${config.customContext}` : ''}${buildChannelSkillsSection(options?.skills)}`
+${DOCS_SECTION}${options?.communityRoster ? `\n\nCOMMUNITY ROSTER (current members and their roles):\nUse this to answer questions about who has which role. Do not dump the full roster unprompted.\n${options.communityRoster}` : ''}${config.customContext ? `\n\nCUSTOM CONTEXT (provided by the server admin):\n${config.customContext}` : ''}${buildChannelSkillsSection(options?.skills)}`
 }
 
 function buildChannelSkillsSection(skills?: Array<{ name: string; trigger: string; content: string }>): string {
@@ -778,20 +823,30 @@ async function callAINonStreaming(
   model: string,
   maxTokens: number,
   systemPrompt: string,
-  messages: Array<{ role: string; content: string }>
-): Promise<{ text: string; usage: { inputTokens: number; outputTokens: number } }> {
+  messages: Array<{ role: string; content: string }>,
+  promptCaching: boolean = false
+): Promise<{ text: string; usage: { inputTokens: number; outputTokens: number; cacheCreationInputTokens: number; cacheReadInputTokens: number } }> {
   if (provider === 'anthropic') {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01'
+    }
+    if (promptCaching) {
+      headers['anthropic-beta'] = 'prompt-caching-2024-07-31'
+    }
+
+    const systemContent = promptCaching
+      ? [{ type: 'text', text: systemPrompt, cache_control: { type: 'ephemeral' } }]
+      : systemPrompt
+
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01'
-      },
+      headers,
       body: JSON.stringify({
         model,
         max_tokens: maxTokens,
-        system: systemPrompt,
+        system: systemContent,
         messages,
         stream: false
       })
@@ -807,7 +862,9 @@ async function callAINonStreaming(
       text: data.content?.map((block: any) => block.text || '').join('') || '',
       usage: {
         inputTokens: data.usage?.input_tokens || 0,
-        outputTokens: data.usage?.output_tokens || 0
+        outputTokens: data.usage?.output_tokens || 0,
+        cacheCreationInputTokens: data.usage?.cache_creation_input_tokens || 0,
+        cacheReadInputTokens: data.usage?.cache_read_input_tokens || 0
       }
     }
   } else {
@@ -840,7 +897,9 @@ async function callAINonStreaming(
       text: data.choices?.[0]?.message?.content || '',
       usage: {
         inputTokens: data.usage?.prompt_tokens || 0,
-        outputTokens: data.usage?.completion_tokens || 0
+        outputTokens: data.usage?.completion_tokens || 0,
+        cacheCreationInputTokens: 0,
+        cacheReadInputTokens: 0
       }
     }
   }
@@ -852,7 +911,9 @@ async function trackUsageInline(
   provider: string,
   model: string,
   inputTokens: number,
-  outputTokens: number
+  outputTokens: number,
+  cacheCreationInputTokens: number = 0,
+  cacheReadInputTokens: number = 0
 ): Promise<void> {
   if (!inputTokens && !outputTokens) return
 
@@ -862,6 +923,7 @@ async function trackUsageInline(
 
   await db.set(`usage:${date}:${requestId}`, {
     source, provider, model, inputTokens, outputTokens,
+    cacheCreationInputTokens, cacheReadInputTokens,
     timestamp: Date.now(),
     expiresAt: Date.now() + (90 * 24 * 60 * 60 * 1000)
   })
@@ -869,22 +931,29 @@ async function trackUsageInline(
   const dailyKey = `usage-daily:${date}`
   const existing = (await db.get(dailyKey)) as any
   const daily = existing || {
-    date, totalInputTokens: 0, totalOutputTokens: 0, totalRequests: 0,
-    bySource: {}, byModel: {}
+    date, totalInputTokens: 0, totalOutputTokens: 0,
+    totalCacheCreationTokens: 0, totalCacheReadTokens: 0,
+    totalRequests: 0, bySource: {}, byModel: {}
   }
 
   daily.totalInputTokens += inputTokens
   daily.totalOutputTokens += outputTokens
+  daily.totalCacheCreationTokens = (daily.totalCacheCreationTokens || 0) + cacheCreationInputTokens
+  daily.totalCacheReadTokens = (daily.totalCacheReadTokens || 0) + cacheReadInputTokens
   daily.totalRequests += 1
 
-  if (!daily.bySource[source]) daily.bySource[source] = { inputTokens: 0, outputTokens: 0, requests: 0 }
+  if (!daily.bySource[source]) daily.bySource[source] = { inputTokens: 0, outputTokens: 0, cacheCreationTokens: 0, cacheReadTokens: 0, requests: 0 }
   daily.bySource[source].inputTokens += inputTokens
   daily.bySource[source].outputTokens += outputTokens
+  daily.bySource[source].cacheCreationTokens = (daily.bySource[source].cacheCreationTokens || 0) + cacheCreationInputTokens
+  daily.bySource[source].cacheReadTokens = (daily.bySource[source].cacheReadTokens || 0) + cacheReadInputTokens
   daily.bySource[source].requests += 1
 
-  if (!daily.byModel[model]) daily.byModel[model] = { inputTokens: 0, outputTokens: 0, requests: 0 }
+  if (!daily.byModel[model]) daily.byModel[model] = { inputTokens: 0, outputTokens: 0, cacheCreationTokens: 0, cacheReadTokens: 0, requests: 0 }
   daily.byModel[model].inputTokens += inputTokens
   daily.byModel[model].outputTokens += outputTokens
+  daily.byModel[model].cacheCreationTokens = (daily.byModel[model].cacheCreationTokens || 0) + cacheCreationInputTokens
+  daily.byModel[model].cacheReadTokens = (daily.byModel[model].cacheReadTokens || 0) + cacheReadInputTokens
   daily.byModel[model].requests += 1
 
   await db.set(dailyKey, daily)
@@ -1031,6 +1100,7 @@ exports.onMessage = async function onMessage(payload: MessagePayload, ctx: BotCo
     const provider = (ctx.config.apiProvider as string) || 'anthropic'
     const model = (ctx.config.model as string) || 'claude-sonnet-4-20250514'
     const maxTokens = (ctx.config.maxTokens as number) || 2048
+    const usePromptCaching = ctx.config.promptCachingEnabled !== false
 
     // Summarize old messages to reduce context size
     let currentSummary = conversation.summary || null
@@ -1048,23 +1118,24 @@ exports.onMessage = async function onMessage(payload: MessagePayload, ctx: BotCo
     // Load Klipy API key for GIF integration
     const klipyApiKey = (await ctx.db.get('secrets:klipyApiKey') as string) || ''
 
-    // Load skills for system prompt
+    // Load skills and community roster for system prompt
     const skills = ((await ctx.db.get('skills:all')) as Array<{ name: string; trigger: string; content: string }>) || []
+    const communityRoster = await buildRoster(ctx.db)
 
     // Build system prompt with current user context and allowed actions
     const systemPrompt = buildChannelSystemPrompt(ctx.config, guildId, {
       memberId,
       displayName
-    }, { hasGifApi: !!klipyApiKey, skills, allowedActions: userPerms.allowedActions })
+    }, { hasGifApi: !!klipyApiKey, skills, allowedActions: userPerms.allowedActions, communityRoster })
 
     let aiResponse: string
     try {
-      const result = await callAINonStreaming(provider, apiKey, model, maxTokens, systemPrompt, messages)
+      const result = await callAINonStreaming(provider, apiKey, model, maxTokens, systemPrompt, messages, usePromptCaching)
       aiResponse = result.text
 
       // Track token usage
       try {
-        await trackUsageInline(ctx.db, 'discord', provider, model, result.usage.inputTokens, result.usage.outputTokens)
+        await trackUsageInline(ctx.db, 'discord', provider, model, result.usage.inputTokens, result.usage.outputTokens, result.usage.cacheCreationInputTokens, result.usage.cacheReadInputTokens)
       } catch {
         // Non-critical
       }

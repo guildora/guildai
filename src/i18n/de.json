@@ -97,7 +97,10 @@
       "apiKeyHint": "Leer lassen, um den aktuellen Schlüssel zu behalten. Nur die letzten 4 Zeichen werden angezeigt.",
       "model": "Modell",
       "modelHint": "z.B. claude-sonnet-4-20250514, gpt-4o",
-      "maxTokens": "Max. Tokens pro Antwort"
+      "maxTokens": "Max. Tokens pro Antwort",
+      "promptCaching": "Prompt Caching",
+      "promptCachingDesc": "System-Prompts cachen, um Kosten zu reduzieren (nur Anthropic)",
+      "promptCachingHint": "Speichert den System-Prompt serverseitig. Wiederholte Anfragen mit dem gleichen Prompt kosten bis zu 90% weniger für Input-Tokens."
     },
     "access": {
       "heading": "Zugriff & Rate-Limits",
@@ -206,6 +209,10 @@
     "totalRequests": "Anfragen gesamt",
     "inputTokens": "Input-Tokens",
     "outputTokens": "Output-Tokens",
+    "cacheWriteTokens": "Cache-Write-Tokens",
+    "cacheReadTokens": "Cache-Read-Tokens",
+    "cacheWrite": "Cache Write",
+    "cacheRead": "Cache Read",
     "bySource": "Nach Quelle",
     "byModel": "Nach Modell",
     "daily": "Tagesübersicht",

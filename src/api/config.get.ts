@@ -39,6 +39,7 @@ export default defineEventHandler(async (event) => {
     allowedSkillCreateRoles: config.allowedSkillCreateRoles ?? 'admin,superadmin',
     actionPermissions: config.actionPermissions ?? null,
     readOnlyMode: config.readOnlyMode ?? false,
+    promptCachingEnabled: config.promptCachingEnabled ?? true,
     loggingEnabled: config.loggingEnabled ?? true,
     customContext: config.customContext ?? '',
     customPersonality: config.customPersonality ?? '',

@@ -10,7 +10,7 @@
 
     <div v-else class="space-y-6">
       <!-- Summary Cards -->
-      <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-3" :class="{ 'sm:grid-cols-5': hasCacheData }">
         <div class="card">
           <p class="text-xs font-medium uppercase text-[var(--color-text-tertiary)]">{{ t('usage.totalRequests') }}</p>
           <p class="mt-1 text-2xl font-bold">{{ formatNumber(totals.requests) }}</p>
@@ -22,6 +22,14 @@
         <div class="card">
           <p class="text-xs font-medium uppercase text-[var(--color-text-tertiary)]">{{ t('usage.outputTokens') }}</p>
           <p class="mt-1 text-2xl font-bold">{{ formatNumber(totals.outputTokens) }}</p>
+        </div>
+        <div v-if="hasCacheData" class="card">
+          <p class="text-xs font-medium uppercase text-[var(--color-text-tertiary)]">{{ t('usage.cacheWriteTokens') }}</p>
+          <p class="mt-1 text-2xl font-bold">{{ formatNumber(totals.cacheCreationTokens) }}</p>
+        </div>
+        <div v-if="hasCacheData" class="card">
+          <p class="text-xs font-medium uppercase text-[var(--color-text-tertiary)]">{{ t('usage.cacheReadTokens') }}</p>
+          <p class="mt-1 text-2xl font-bold">{{ formatNumber(totals.cacheReadTokens) }}</p>
         </div>
       </div>
 
@@ -35,7 +43,9 @@
                 <th class="pb-2 pr-4">{{ t('usage.source') }}</th>
                 <th class="pb-2 pr-4 text-right">{{ t('usage.requests') }}</th>
                 <th class="pb-2 pr-4 text-right">{{ t('usage.input') }}</th>
-                <th class="pb-2 text-right">{{ t('usage.output') }}</th>
+                <th class="pb-2 pr-4 text-right">{{ t('usage.output') }}</th>
+                <th v-if="hasCacheData" class="pb-2 pr-4 text-right">{{ t('usage.cacheWrite') }}</th>
+                <th v-if="hasCacheData" class="pb-2 text-right">{{ t('usage.cacheRead') }}</th>
               </tr>
             </thead>
             <tbody>
@@ -43,7 +53,9 @@
                 <td class="py-2 pr-4 font-medium">{{ sourceLabel(source) }}</td>
                 <td class="py-2 pr-4 text-right font-mono text-xs">{{ formatNumber(stats.requests) }}</td>
                 <td class="py-2 pr-4 text-right font-mono text-xs">{{ formatNumber(stats.inputTokens) }}</td>
-                <td class="py-2 text-right font-mono text-xs">{{ formatNumber(stats.outputTokens) }}</td>
+                <td class="py-2 pr-4 text-right font-mono text-xs">{{ formatNumber(stats.outputTokens) }}</td>
+                <td v-if="hasCacheData" class="py-2 pr-4 text-right font-mono text-xs">{{ formatNumber(stats.cacheCreationTokens || 0) }}</td>
+                <td v-if="hasCacheData" class="py-2 text-right font-mono text-xs">{{ formatNumber(stats.cacheReadTokens || 0) }}</td>
               </tr>
             </tbody>
           </table>
@@ -60,7 +72,9 @@
                 <th class="pb-2 pr-4">{{ t('usage.model') }}</th>
                 <th class="pb-2 pr-4 text-right">{{ t('usage.requests') }}</th>
                 <th class="pb-2 pr-4 text-right">{{ t('usage.input') }}</th>
-                <th class="pb-2 text-right">{{ t('usage.output') }}</th>
+                <th class="pb-2 pr-4 text-right">{{ t('usage.output') }}</th>
+                <th v-if="hasCacheData" class="pb-2 pr-4 text-right">{{ t('usage.cacheWrite') }}</th>
+                <th v-if="hasCacheData" class="pb-2 text-right">{{ t('usage.cacheRead') }}</th>
               </tr>
             </thead>
             <tbody>
@@ -68,7 +82,9 @@
                 <td class="py-2 pr-4 font-mono text-xs">{{ model }}</td>
                 <td class="py-2 pr-4 text-right font-mono text-xs">{{ formatNumber(stats.requests) }}</td>
                 <td class="py-2 pr-4 text-right font-mono text-xs">{{ formatNumber(stats.inputTokens) }}</td>
-                <td class="py-2 text-right font-mono text-xs">{{ formatNumber(stats.outputTokens) }}</td>
+                <td class="py-2 pr-4 text-right font-mono text-xs">{{ formatNumber(stats.outputTokens) }}</td>
+                <td v-if="hasCacheData" class="py-2 pr-4 text-right font-mono text-xs">{{ formatNumber(stats.cacheCreationTokens || 0) }}</td>
+                <td v-if="hasCacheData" class="py-2 text-right font-mono text-xs">{{ formatNumber(stats.cacheReadTokens || 0) }}</td>
               </tr>
             </tbody>
           </table>
@@ -88,7 +104,9 @@
                 <th class="pb-2 pr-4">{{ t('usage.date') }}</th>
                 <th class="pb-2 pr-4 text-right">{{ t('usage.requests') }}</th>
                 <th class="pb-2 pr-4 text-right">{{ t('usage.input') }}</th>
-                <th class="pb-2 text-right">{{ t('usage.output') }}</th>
+                <th class="pb-2 pr-4 text-right">{{ t('usage.output') }}</th>
+                <th v-if="hasCacheData" class="pb-2 pr-4 text-right">{{ t('usage.cacheWrite') }}</th>
+                <th v-if="hasCacheData" class="pb-2 text-right">{{ t('usage.cacheRead') }}</th>
               </tr>
             </thead>
             <tbody>
@@ -96,7 +114,9 @@
                 <td class="py-2 pr-4">{{ day.date }}</td>
                 <td class="py-2 pr-4 text-right font-mono text-xs">{{ formatNumber(day.totalRequests) }}</td>
                 <td class="py-2 pr-4 text-right font-mono text-xs">{{ formatNumber(day.totalInputTokens) }}</td>
-                <td class="py-2 text-right font-mono text-xs">{{ formatNumber(day.totalOutputTokens) }}</td>
+                <td class="py-2 pr-4 text-right font-mono text-xs">{{ formatNumber(day.totalOutputTokens) }}</td>
+                <td v-if="hasCacheData" class="py-2 pr-4 text-right font-mono text-xs">{{ formatNumber(day.totalCacheCreationTokens || 0) }}</td>
+                <td v-if="hasCacheData" class="py-2 text-right font-mono text-xs">{{ formatNumber(day.totalCacheReadTokens || 0) }}</td>
               </tr>
             </tbody>
           </table>
@@ -114,10 +134,11 @@ const { t } = useI18n()
 
 const { data, pending, error } = await useFetch('/api/apps/guildai/usage')
 
-const totals = computed(() => data.value?.totals || { inputTokens: 0, outputTokens: 0, requests: 0 })
+const totals = computed(() => data.value?.totals || { inputTokens: 0, outputTokens: 0, cacheCreationTokens: 0, cacheReadTokens: 0, requests: 0 })
 const bySource = computed(() => data.value?.bySource || {})
 const byModel = computed(() => data.value?.byModel || {})
 const days = computed(() => data.value?.days || [])
+const hasCacheData = computed(() => (totals.value.cacheCreationTokens || 0) > 0 || (totals.value.cacheReadTokens || 0) > 0)
 
 function sourceLabel(source) {
   if (source === 'hub') return 'Hub'

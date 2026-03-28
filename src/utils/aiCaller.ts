@@ -5,13 +5,14 @@ export interface AiCallerOptions {
   maxTokens: number
   systemPrompt: string
   messages: Array<{ role: 'user' | 'assistant'; content: string }>
+  promptCaching?: boolean
 }
 
 export interface StreamChunk {
   type: 'text' | 'done' | 'error'
   text?: string
   error?: string
-  usage?: { inputTokens: number; outputTokens: number }
+  usage?: { inputTokens: number; outputTokens: number; cacheCreationInputTokens: number; cacheReadInputTokens: number }
 }
 
 export async function* callAI(options: AiCallerOptions): AsyncGenerator<StreamChunk> {
@@ -23,17 +24,29 @@ export async function* callAI(options: AiCallerOptions): AsyncGenerator<StreamCh
 }
 
 async function* callAnthropic(options: AiCallerOptions): AsyncGenerator<StreamChunk> {
+  const useCache = options.promptCaching !== false
+
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    'x-api-key': options.apiKey,
+    'anthropic-version': '2023-06-01'
+  }
+  if (useCache) {
+    headers['anthropic-beta'] = 'prompt-caching-2024-07-31'
+  }
+
+  // Build system content — with cache_control if caching enabled
+  const systemContent = useCache
+    ? [{ type: 'text', text: options.systemPrompt, cache_control: { type: 'ephemeral' } }]
+    : options.systemPrompt
+
   const response = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': options.apiKey,
-      'anthropic-version': '2023-06-01'
-    },
+    headers,
     body: JSON.stringify({
       model: options.model,
       max_tokens: options.maxTokens,
-      system: options.systemPrompt,
+      system: systemContent,
       messages: options.messages,
       stream: true
     })
@@ -50,6 +63,8 @@ async function* callAnthropic(options: AiCallerOptions): AsyncGenerator<StreamCh
   let buffer = ''
   let inputTokens = 0
   let outputTokens = 0
+  let cacheCreationInputTokens = 0
+  let cacheReadInputTokens = 0
 
   try {
     while (true) {
@@ -71,6 +86,8 @@ async function* callAnthropic(options: AiCallerOptions): AsyncGenerator<StreamCh
             yield { type: 'text', text: event.delta.text }
           } else if (event.type === 'message_start' && event.message?.usage) {
             inputTokens = event.message.usage.input_tokens || 0
+            cacheCreationInputTokens = event.message.usage.cache_creation_input_tokens || 0
+            cacheReadInputTokens = event.message.usage.cache_read_input_tokens || 0
           } else if (event.type === 'message_delta' && event.usage) {
             outputTokens = event.usage.output_tokens || 0
           }
@@ -83,7 +100,7 @@ async function* callAnthropic(options: AiCallerOptions): AsyncGenerator<StreamCh
     reader.releaseLock()
   }
 
-  yield { type: 'done', usage: { inputTokens, outputTokens } }
+  yield { type: 'done', usage: { inputTokens, outputTokens, cacheCreationInputTokens, cacheReadInputTokens } }
 }
 
 async function* callOpenAI(options: AiCallerOptions): AsyncGenerator<StreamChunk> {
@@ -152,5 +169,5 @@ async function* callOpenAI(options: AiCallerOptions): AsyncGenerator<StreamChunk
     reader.releaseLock()
   }
 
-  yield { type: 'done', usage: { inputTokens, outputTokens } }
+  yield { type: 'done', usage: { inputTokens, outputTokens, cacheCreationInputTokens: 0, cacheReadInputTokens: 0 } }
 }
