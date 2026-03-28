@@ -39,7 +39,7 @@ AVAILABLE ACTIONS:
 - delete_message: Delete a message (destructive:requires Hub confirmation)
 - create_skill: Create a new custom skill in the Skill Library
 
-In the Discord channel, only safe actions (assign_role, remove_role, create_channel, rename_channel, send_message, create_skill) are auto-executed. Destructive actions must be confirmed in the Hub.
+In the Discord channel, actions are executed based on the user's permission role. The permissions matrix (configurable in the Hub) determines which actions each role can perform on Discord. Actions not permitted on Discord must be done in the Hub.
 
 SKILL LIBRARY:
 GuildAI supports custom skills. Skills are reusable prompt templates with a name, trigger phrase, and content (Markdown instructions).
