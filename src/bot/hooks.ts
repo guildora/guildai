@@ -467,7 +467,7 @@ async function resolveChannelByName(
   bot: BotContext['bot'],
   channelName: string
 ): Promise<{ id: string; name: string } | { ambiguous: Array<{ id: string; name: string }> } | null> {
-  const channels = await bot.listTextChannels()
+  const channels = await bot.listAllChannels()
   const nameLower = normalizeUnicode(channelName).toLowerCase()
 
   // Exact match first (with Unicode normalization)
