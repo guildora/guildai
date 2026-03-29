@@ -50,7 +50,7 @@ export const ACTION_TYPES: Record<string, ActionDefinition> = {
   },
   save_memory: {
     params: ['title', 'content', 'summary', 'keywords', 'pinned'],
-    description: 'Save an important memory about the guild, its members, or events. Set pinned to true for key memories that should always show full details.'
+    description: 'Retain important information about the guild, its members, or events. Set pinned to true for crucial permanent facts.'
   },
   delete_memory: {
     params: ['memoryId'],

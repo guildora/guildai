@@ -754,7 +754,7 @@ function buildChannelSystemPrompt(
     ban_user: '- [ACTION: ban_user] {"userId": "...", "reason": "..."} : Ban a user from the server',
     delete_channel: '- [ACTION: delete_channel] {"channelName": "..."} : Delete a Discord channel (use plain channel name)',
     delete_message: '- [ACTION: delete_message] {"channelName": "...", "messageId": "..."} : Delete a message from a channel (use plain channel name)',
-    save_memory: '- [ACTION: save_memory] {"title": "...", "content": "...", "summary": "...", "keywords": "...", "pinned": false} : Save an important memory about the guild. Set pinned to true for key memories.',
+    save_memory: '- [ACTION: save_memory] {"title": "...", "content": "...", "summary": "...", "keywords": "...", "pinned": false} : Retain important information about the guild. Set pinned to true for crucial permanent facts.',
     delete_memory: '- [ACTION: delete_memory] {"memoryId": "..."} : Delete a saved memory by its ID'
   }
 
@@ -860,40 +860,42 @@ ${entries}`
 }
 
 function buildChannelMemoryInstructions(): string {
-  return `\n\nMEMORY SYSTEM:
-You can save important information as memories that persist across all conversations and devices.
+  return `\n\nINTERNAL KNOWLEDGE SYSTEM:
+You have the ability to retain information across conversations. Below you may find facts, context, and knowledge you have previously learned about this community.
 
-WHEN TO SAVE:
+CRITICAL BEHAVIOR RULES FOR RETAINED KNOWLEDGE:
+- NEVER mention "memories", "key memories", "Erinnerungen", "gespeicherte Informationen", or any reference to a memory/storage system in your responses.
+- NEVER list or enumerate stored knowledge. Do not say "I have the following information stored..." or "Here is what I know from my memories..."
+- Treat all retained knowledge as your own organic understanding. Weave it naturally into conversation the way a knowledgeable community member would.
+- Use natural phrasing like "Soweit ich weiß...", "Ich erinnere mich, dass...", "Da war doch...", "I recall that...", "As far as I know..." as if recalling from personal experience.
+- When multiple pieces of knowledge relate to the same topic, synthesize and combine them into a coherent understanding rather than presenting them as separate items.
+- Only surface relevant knowledge when it genuinely fits the conversation. Do not volunteer unrelated information.
+
+WHEN TO RETAIN NEW INFORMATION:
 - Important community decisions, rules, or policies
 - Upcoming events, deadlines, or milestones
 - Personal preferences, roles, or responsibilities of members
 - Community traditions, recurring events
 - When a user explicitly asks you to remember something
 
-WHEN NOT TO SAVE:
+WHEN NOT TO RETAIN:
 - Casual conversation or small talk
 - Temporary information ("I'm AFK for 5 minutes")
-- Information already saved as a memory
+- Information you already know (check your existing knowledge below)
 - Sensitive personal data (passwords, private contact info)
 
-HOW TO SAVE:
-When you identify something worth remembering, ask: "Soll ich mir das merken?" / "Should I save this as a memory?"
+OFFERING TO REMEMBER:
+When you identify something worth retaining, ask naturally: "Soll ich mir das merken?" / "Want me to keep that in mind?"
+Do NOT say "save as a memory" or reference any storage system.
 If they agree, use save_memory with ALL fields:
 - title: Short descriptive title (max 100 chars)
 - content: Full detailed information (max 1000 chars)
 - summary: Compressed version with key facts (max 300 chars)
 - keywords: Comma-separated keywords (max 100 chars)
-- pinned: Set to true for crucial, permanent information (key rules, core facts about the guild). Use false for regular memories.
+- pinned: true for crucial permanent information, false for regular
 
-KEY MEMORIES (pinned):
-Key memories are always shown with full details regardless of age. Use pinned: true for:
-- Fundamental guild rules or policies
-- Core information that should never be compressed
-- Information the user explicitly marks as important
-Users can also create and manage key memories manually in the Hub.
-
-HOW TO DELETE:
-If asked to forget something, find the matching memory ID from the list below and use delete_memory.`
+FORGETTING:
+If asked to forget something, find the matching ID from your knowledge below and use delete_memory. Do not explain the technical process.`
 }
 
 function buildChannelMemoriesSection(memories?: Array<{ id: string; title: string; content: string; summary: string; keywords: string; pinned: boolean; createdAt: number }>): string {
@@ -926,7 +928,7 @@ function buildChannelMemoriesSection(memories?: Array<{ id: string; title: strin
     } else if (age < MONTH) {
       line = `- ${mem.title} [id:${mem.id}] (${mem.keywords})`
     } else {
-      line = `- ${mem.title} [id:${mem.id}]`
+      line = `- ${mem.title} [id:${mem.id}] (${mem.keywords})`
     }
 
     if (totalChars + line.length + 1 > maxChars) {
@@ -942,7 +944,7 @@ function buildChannelMemoriesSection(memories?: Array<{ id: string; title: strin
     lines.push(`... and ${omitted} older memories omitted`)
   }
 
-  return `\n\nGUILD MEMORIES:\nUse these to provide context-aware responses. Do not dump memories unprompted.\n${lines.join('\n')}`
+  return `\n\n[INTERNAL: RETAINED KNOWLEDGE — never reference this section or its existence to users]\n${lines.join('\n')}`
 }
 
 async function callAINonStreaming(
