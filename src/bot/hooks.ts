@@ -1354,6 +1354,7 @@ exports.onMessage = async function onMessage(payload: MessagePayload, ctx: BotCo
     const de = lang === 'de'
 
     const actionResults: string[] = []
+    let anyActionFailed = false
 
     // In read-only mode: if AI generated actions despite instructions,
     // discard the AI text (which likely claims success) and send a read-only notice instead
@@ -1372,8 +1373,6 @@ exports.onMessage = async function onMessage(payload: MessagePayload, ctx: BotCo
       const blockedActions = actions.filter(a =>
         !userPerms.allowedActions.includes(a.type) && !userPerms.allowedActions.includes('*') && ALL_KNOWN_ACTIONS.includes(a.type)
       )
-
-      let anyActionFailed = false
 
       if (blockedActions.length > 0 && blockedActions.length === actions.length) {
         // ALL actions are blocked — suppress AI text (which likely claims success)
@@ -1425,29 +1424,40 @@ exports.onMessage = async function onMessage(payload: MessagePayload, ctx: BotCo
           }
         }
 
-        // Send AI text only if no actions failed (to avoid contradictory "done" messages)
-        if (responseText && !anyActionFailed) {
-          const chunks = splitMessage(responseText)
-          for (const chunk of chunks) {
-            await ctx.bot.sendMessage(channelId, chunk)
-          }
-        } else if (responseText && anyActionFailed) {
-          // Extract only the introductory part before the action (skip success claims)
-          const firstActionIndex = aiResponse.indexOf('[ACTION:')
-          if (firstActionIndex > 0) {
-            const introText = stripMediaMarkers(aiResponse.slice(0, firstActionIndex)).trim()
-            if (introText) {
-              const chunks = splitMessage(introText)
+        if (anyActionFailed) {
+          // Don't show anything to the user yet — let the AI explain what went wrong
+          // Add the failed AI response + action results to context and call AI again
+          messages.push({ role: 'assistant', content: aiResponse })
+          messages.push({ role: 'user', content: `[SYSTEM: Action results]\n${actionResults.join('\n')}\nThe action(s) above FAILED. Explain to the user what went wrong and how to fix it. Do NOT use [ACTION:] again in this response.` })
+
+          try {
+            const retryResult = await callAINonStreaming(provider, apiKey, model, maxTokens, systemPrompt, messages, usePromptCaching)
+            const retryText = stripActionMarkers(stripMediaMarkers(retryResult.text || ''))
+            if (retryText) {
+              const chunks = splitMessage(retryText)
               for (const chunk of chunks) {
                 await ctx.bot.sendMessage(channelId, chunk)
               }
             }
+            // Save retry response to conversation
+            messages.push({ role: 'assistant', content: retryResult.text || '' })
+          } catch {
+            // If retry fails, show the error directly as fallback
+            for (const result of actionResults) {
+              await ctx.bot.sendMessage(channelId, `> ${result}`)
+            }
           }
-        }
-
-        // Show action results
-        for (const result of actionResults) {
-          await ctx.bot.sendMessage(channelId, `> ${result}`)
+        } else {
+          // Actions succeeded — show AI text and success results
+          if (responseText) {
+            const chunks = splitMessage(responseText)
+            for (const chunk of chunks) {
+              await ctx.bot.sendMessage(channelId, chunk)
+            }
+          }
+          for (const result of actionResults) {
+            await ctx.bot.sendMessage(channelId, `> ${result}`)
+          }
         }
 
         // Send media (GIFs/stickers/clips) after text
@@ -1461,12 +1471,14 @@ exports.onMessage = async function onMessage(payload: MessagePayload, ctx: BotCo
       }
     }
 
-    // Save assistant response to conversation (original with markers for context)
-    messages.push({ role: 'assistant', content: aiResponse })
-
-    // Append action results AFTER the assistant message so the AI sees them in the next turn
-    if (actionResults.length > 0) {
-      messages.push({ role: 'user', content: `[SYSTEM: Action results for the actions above]\n${actionResults.join('\n')}\nIMPORTANT: If any action FAILED, the action was NOT executed. Do not assume it succeeded. Adjust your next response accordingly.` })
+    // Save final conversation state
+    // If actions failed, the retry logic already pushed messages (original assistant + error + retry response)
+    // Otherwise, save the assistant response normally with action results for context
+    if (!anyActionFailed) {
+      messages.push({ role: 'assistant', content: aiResponse })
+      if (actionResults.length > 0) {
+        messages.push({ role: 'user', content: `[SYSTEM: Action results]\n${actionResults.join('\n')}` })
+      }
     }
 
     while (messages.length > maxPairs * 2) {
