@@ -467,7 +467,10 @@ async function resolveChannelByName(
   bot: BotContext['bot'],
   channelName: string
 ): Promise<{ id: string; name: string } | { ambiguous: Array<{ id: string; name: string }> } | null> {
-  const channels = await bot.listAllChannels()
+  // Use listAllChannels (includes categories), fall back to listTextChannels
+  const channels = typeof bot.listAllChannels === 'function'
+    ? await bot.listAllChannels()
+    : await bot.listTextChannels()
   const nameLower = normalizeUnicode(channelName).toLowerCase()
 
   // Exact match first (with Unicode normalization)
@@ -483,6 +486,12 @@ async function resolveChannelByName(
   if (fuzzy.length > 1) return { ambiguous: fuzzy.slice(0, 5) }
 
   return null
+}
+
+async function listCategoryNames(bot: BotContext['bot']): Promise<string[]> {
+  if (typeof bot.listAllChannels !== 'function') return []
+  const channels = await bot.listAllChannels()
+  return channels.filter(c => c.type === 'category').map(c => c.name)
 }
 
 async function executeActionInline(
@@ -521,7 +530,13 @@ async function executeActionInline(
       // Resolve category name to parentId
       if (categoryName) {
         const resolved = await resolveChannelByName(bot, categoryName)
-        if (!resolved) return { success: false, message: de ? `Kategorie "${categoryName}" nicht gefunden.` : `Category "${categoryName}" not found.` }
+        if (!resolved) {
+          const categories = await listCategoryNames(bot)
+          const hint = categories.length > 0
+            ? (de ? ` Verfügbare Kategorien: ${categories.join(', ')}` : ` Available categories: ${categories.join(', ')}`)
+            : ''
+          return { success: false, message: (de ? `Kategorie "${categoryName}" nicht gefunden.` : `Category "${categoryName}" not found.`) + hint }
+        }
         if ('ambiguous' in resolved) {
           const options = resolved.ambiguous.map(c => `<#${c.id}>`).join(', ')
           return { success: false, message: de ? `Mehrere Kategorien gefunden: ${options}` : `Multiple categories found: ${options}` }
@@ -1377,12 +1392,58 @@ exports.onMessage = async function onMessage(payload: MessagePayload, ctx: BotCo
         let responseText = stripActionMarkers(aiResponse)
         responseText = stripMediaMarkers(responseText)
 
-        // Send the AI text response first (without markers)
-        if (responseText) {
+        // Execute actions FIRST so we know if they succeeded before showing AI text
+        const actionResults: string[] = []
+        let anyActionFailed = false
+        if (actions.length > 0) {
+          for (const action of actions) {
+            if (userPerms.allowedActions.includes(action.type) || userPerms.allowedActions.includes('*')) {
+              try {
+                const result = await executeActionInline(action, ctx.bot, ctx.db, lang)
+                if (result.success) {
+                  actionResults.push(`✅ ${action.type}: ${result.message}`)
+                } else {
+                  actionResults.push(`❌ ${action.type} FAILED: ${result.message}`)
+                  anyActionFailed = true
+                }
+                if (ctx.config.loggingEnabled ?? true) {
+                  await logActionEntry(ctx.db, memberId, action, result, 'discord')
+                }
+              } catch (err: any) {
+                const errMsg = err.message || 'Unknown error'
+                actionResults.push(`❌ ${action.type} FAILED: ${errMsg}`)
+                anyActionFailed = true
+              }
+            } else if (ALL_KNOWN_ACTIONS.includes(action.type)) {
+              actionResults.push(`❌ ${action.type} DENIED: no permission`)
+              anyActionFailed = true
+            }
+          }
+        }
+
+        // Send AI text only if no actions failed (to avoid contradictory "done" messages)
+        if (responseText && !anyActionFailed) {
           const chunks = splitMessage(responseText)
           for (const chunk of chunks) {
             await ctx.bot.sendMessage(channelId, chunk)
           }
+        } else if (responseText && anyActionFailed) {
+          // Extract only the introductory part before the action (skip success claims)
+          const firstActionIndex = aiResponse.indexOf('[ACTION:')
+          if (firstActionIndex > 0) {
+            const introText = stripMediaMarkers(aiResponse.slice(0, firstActionIndex)).trim()
+            if (introText) {
+              const chunks = splitMessage(introText)
+              for (const chunk of chunks) {
+                await ctx.bot.sendMessage(channelId, chunk)
+              }
+            }
+          }
+        }
+
+        // Show action results
+        for (const result of actionResults) {
+          await ctx.bot.sendMessage(channelId, `> ${result}`)
         }
 
         // Send media (GIFs/stickers/clips) after text
@@ -1393,38 +1454,6 @@ exports.onMessage = async function onMessage(payload: MessagePayload, ctx: BotCo
           }
         }
 
-        // Process actions (only when not in read-only mode)
-        const actionResults: string[] = []
-        for (const action of actions) {
-          if (userPerms.allowedActions.includes(action.type) || userPerms.allowedActions.includes('*')) {
-            // User has permission for this action on discord - execute directly
-            try {
-              const result = await executeActionInline(action, ctx.bot, ctx.db, lang)
-              if (result.success) {
-                await ctx.bot.sendMessage(channelId, `> ✅ ${result.message}`)
-                actionResults.push(`✅ ${action.type}: ${result.message}`)
-              } else {
-                await ctx.bot.sendMessage(channelId, `> ❌ ${result.message}`)
-                actionResults.push(`❌ ${action.type} FAILED: ${result.message}`)
-              }
-              if (ctx.config.loggingEnabled ?? true) {
-                await logActionEntry(ctx.db, memberId, action, result, 'discord')
-              }
-            } catch (err: any) {
-              const errMsg = err.message || 'Unknown error'
-              await ctx.bot.sendMessage(channelId, de
-                ? `> ❌ Aktion fehlgeschlagen: ${errMsg}`
-                : `> ❌ Action failed: ${errMsg}`)
-              actionResults.push(`❌ ${action.type} FAILED: ${errMsg}`)
-            }
-          } else if (ALL_KNOWN_ACTIONS.includes(action.type)) {
-            // Known action but user doesn't have permission on discord
-            await ctx.bot.sendMessage(channelId, de
-              ? '> Das kann ich leider nicht machen. Dir fehlen die Berechtigungen dafür.'
-              : "> I can't do that. You don't have the required permissions.")
-            actionResults.push(`❌ ${action.type} DENIED: no permission`)
-          }
-        }
         // Append action results to conversation so AI sees them in next turn
         if (actionResults.length > 0) {
           messages.push({ role: 'user', content: `[SYSTEM: Action results]\n${actionResults.join('\n')}` })
