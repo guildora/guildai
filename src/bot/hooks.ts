@@ -1414,9 +1414,9 @@ exports.onMessage = async function onMessage(payload: MessagePayload, ctx: BotCo
               try {
                 const result = await executeActionInline(action, ctx.bot, ctx.db, lang)
                 if (result.success) {
-                  actionResults.push(`✅ ${action.type}: ${result.message}`)
+                  actionResults.push(`✅ ${result.message}`)
                 } else {
-                  actionResults.push(`❌ ${action.type} FAILED: ${result.message}`)
+                  actionResults.push(`❌ ${result.message}`)
                   anyActionFailed = true
                 }
                 if (ctx.config.loggingEnabled ?? true) {
@@ -1424,7 +1424,7 @@ exports.onMessage = async function onMessage(payload: MessagePayload, ctx: BotCo
                 }
               } catch (err: any) {
                 const errMsg = err.message || 'Unknown error'
-                actionResults.push(`❌ ${action.type} FAILED: ${errMsg}`)
+                actionResults.push(`❌ ${errMsg}`)
                 anyActionFailed = true
               }
             } else if (ALL_KNOWN_ACTIONS.includes(action.type)) {
