@@ -646,7 +646,7 @@ async function executeActionInline(
         content: content.trim(),
         summary: summary.trim(),
         keywords: keywords.trim(),
-        pinned: pinned === true || pinned === 'true',
+        pinned: false, // Pinning (key memories) is only allowed via the Hub
         createdBy: 'discord',
         createdAt: Date.now(),
         updatedAt: Date.now(),
@@ -796,7 +796,7 @@ function buildChannelSystemPrompt(
     ban_user: '- [ACTION: ban_user] {"userId": "...", "reason": "..."} : Ban a user from the server',
     delete_channel: '- [ACTION: delete_channel] {"channelName": "..."} : Delete a Discord channel (use plain channel name)',
     delete_message: '- [ACTION: delete_message] {"channelName": "...", "messageId": "..."} : Delete a message from a channel (use plain channel name)',
-    save_memory: '- [ACTION: save_memory] {"title": "...", "content": "...", "summary": "...", "keywords": "...", "pinned": false} : Retain important information about the guild. Set pinned to true for crucial permanent facts.',
+    save_memory: '- [ACTION: save_memory] {"title": "...", "content": "...", "summary": "...", "keywords": "..."} : Retain important information about the guild. Pinning as key memory is only available in the Hub.',
     delete_memory: '- [ACTION: delete_memory] {"memoryId": "..."} : Delete a saved memory by its ID'
   }
 
@@ -943,12 +943,12 @@ WHEN NOT TO RETAIN:
 OFFERING TO REMEMBER:
 When you identify something worth retaining, ask naturally: "Soll ich mir das merken?" / "Want me to keep that in mind?"
 Do NOT say "save as a memory" or reference any storage system.
-If they agree, use save_memory with ALL fields:
+If they agree, use save_memory with these fields:
 - title: Short descriptive title (max 100 chars)
 - content: Full detailed information (max 1000 chars)
 - summary: Compressed version with key facts (max 300 chars)
 - keywords: Comma-separated keywords (max 100 chars)
-- pinned: true for crucial permanent information, false for regular
+Do NOT set pinned. Key memories (pinned) can only be created by admins in the GuildAI Hub.
 
 FORGETTING:
 If asked to forget something, find the matching ID from your knowledge below and use delete_memory. Do not explain the technical process.`
