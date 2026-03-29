@@ -1353,6 +1353,8 @@ exports.onMessage = async function onMessage(payload: MessagePayload, ctx: BotCo
     const lang = (ctx.config.defaultLanguage as string) || 'en'
     const de = lang === 'de'
 
+    const actionResults: string[] = []
+
     // In read-only mode: if AI generated actions despite instructions,
     // discard the AI text (which likely claims success) and send a read-only notice instead
     if (readOnly && actions.length > 0) {
@@ -1371,12 +1373,16 @@ exports.onMessage = async function onMessage(payload: MessagePayload, ctx: BotCo
         !userPerms.allowedActions.includes(a.type) && !userPerms.allowedActions.includes('*') && ALL_KNOWN_ACTIONS.includes(a.type)
       )
 
+      let anyActionFailed = false
+
       if (blockedActions.length > 0 && blockedActions.length === actions.length) {
         // ALL actions are blocked — suppress AI text (which likely claims success)
         // and send a natural-sounding response instead
         await ctx.bot.sendMessage(channelId, de
           ? 'Sorry, das kann ich leider nicht machen. Du hast nicht die nötigen Berechtigungen dafür.'
           : "Sorry, I can't do that. You don't have the required permissions for this.")
+        actionResults.push(`❌ All actions DENIED: no permission`)
+        anyActionFailed = true
       } else {
         // Extract media markers before stripping
         const mediaMatches: Array<{ type: string; query: string }> = []
@@ -1393,8 +1399,6 @@ exports.onMessage = async function onMessage(payload: MessagePayload, ctx: BotCo
         responseText = stripMediaMarkers(responseText)
 
         // Execute actions FIRST so we know if they succeeded before showing AI text
-        const actionResults: string[] = []
-        let anyActionFailed = false
         if (actions.length > 0) {
           for (const action of actions) {
             if (userPerms.allowedActions.includes(action.type) || userPerms.allowedActions.includes('*')) {
@@ -1454,15 +1458,16 @@ exports.onMessage = async function onMessage(payload: MessagePayload, ctx: BotCo
           }
         }
 
-        // Append action results to conversation so AI sees them in next turn
-        if (actionResults.length > 0) {
-          messages.push({ role: 'user', content: `[SYSTEM: Action results]\n${actionResults.join('\n')}` })
-        }
       }
     }
 
     // Save assistant response to conversation (original with markers for context)
     messages.push({ role: 'assistant', content: aiResponse })
+
+    // Append action results AFTER the assistant message so the AI sees them in the next turn
+    if (actionResults.length > 0) {
+      messages.push({ role: 'user', content: `[SYSTEM: Action results for the actions above]\n${actionResults.join('\n')}\nIMPORTANT: If any action FAILED, the action was NOT executed. Do not assume it succeeded. Adjust your next response accordingly.` })
+    }
 
     while (messages.length > maxPairs * 2) {
       messages.shift()
