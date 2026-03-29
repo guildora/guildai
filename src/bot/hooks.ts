@@ -822,9 +822,11 @@ To propose an action, use this exact format on its own line:
 [ACTION: action_type] {"param": "value"}
 
 IMPORTANT ACTION RULES:
-- Actions are AUTO-EXECUTED by the system. Do NOT say "Done", "Erledigt", or confirm execution yourself.
-- Simply propose the action with [ACTION:] and the system will execute it and report the result.
-- You may explain WHAT you are about to do, but do NOT claim it is already done.`}
+- Actions are AUTO-EXECUTED by the system AFTER your message is sent. The result appears as a separate system message (✅ or ❌).
+- NEVER say "Done", "Fertig", "Erledigt", "ready", "erstellt", or anything that claims the action already succeeded. You do NOT know the result yet when you write your message.
+- Your message is sent BEFORE the action runs. If you claim success and the action fails, the user sees contradictory messages.
+- ONLY say what you are ABOUT TO DO, e.g. "Ich erstelle jetzt den Kanal..." or "Creating the channel now...". Then place the [ACTION:] tag.
+- If a previous action FAILED (you see a ❌ error), acknowledge the failure and adjust. For example, if create_channel failed because the category was not found, the channel was NOT created — do not try to move a non-existent channel, instead retry create_channel with the corrected category name.`}
 - You can ONLY use the actions listed above. Any other actions are not available to you.
 - If a user asks for an action you cannot perform, politely explain that this action is not available in the Discord channel and must be done in the **GuildAI Hub** web interface.
 
@@ -1392,6 +1394,7 @@ exports.onMessage = async function onMessage(payload: MessagePayload, ctx: BotCo
         }
 
         // Process actions (only when not in read-only mode)
+        const actionResults: string[] = []
         for (const action of actions) {
           if (userPerms.allowedActions.includes(action.type) || userPerms.allowedActions.includes('*')) {
             // User has permission for this action on discord - execute directly
@@ -1399,23 +1402,32 @@ exports.onMessage = async function onMessage(payload: MessagePayload, ctx: BotCo
               const result = await executeActionInline(action, ctx.bot, ctx.db, lang)
               if (result.success) {
                 await ctx.bot.sendMessage(channelId, `> ✅ ${result.message}`)
+                actionResults.push(`✅ ${action.type}: ${result.message}`)
               } else {
                 await ctx.bot.sendMessage(channelId, `> ❌ ${result.message}`)
+                actionResults.push(`❌ ${action.type} FAILED: ${result.message}`)
               }
               if (ctx.config.loggingEnabled ?? true) {
                 await logActionEntry(ctx.db, memberId, action, result, 'discord')
               }
             } catch (err: any) {
+              const errMsg = err.message || 'Unknown error'
               await ctx.bot.sendMessage(channelId, de
-                ? `> ❌ Aktion fehlgeschlagen: ${err.message || 'Unbekannter Fehler'}`
-                : `> ❌ Action failed: ${err.message || 'Unknown error'}`)
+                ? `> ❌ Aktion fehlgeschlagen: ${errMsg}`
+                : `> ❌ Action failed: ${errMsg}`)
+              actionResults.push(`❌ ${action.type} FAILED: ${errMsg}`)
             }
           } else if (ALL_KNOWN_ACTIONS.includes(action.type)) {
             // Known action but user doesn't have permission on discord
             await ctx.bot.sendMessage(channelId, de
               ? '> Das kann ich leider nicht machen. Dir fehlen die Berechtigungen dafür.'
               : "> I can't do that. You don't have the required permissions.")
+            actionResults.push(`❌ ${action.type} DENIED: no permission`)
           }
+        }
+        // Append action results to conversation so AI sees them in next turn
+        if (actionResults.length > 0) {
+          messages.push({ role: 'user', content: `[SYSTEM: Action results]\n${actionResults.join('\n')}` })
         }
       }
     }
