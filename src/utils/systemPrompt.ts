@@ -52,6 +52,13 @@ ${actionList || '(No actions currently enabled)'}
 CHANNEL NAME RESOLUTION:
 For channel actions, use "channelName" with the plain name (e.g. "off-topic", "general"). The system normalizes Unicode, so fancy names like "💬・𝐎𝐟𝐟-𝐓𝐨𝐩𝐢𝐜" will be matched to "off-topic". You can also use "channelId" if you have the exact ID.
 
+CHANNEL CREATION RULES:
+- When a user asks to create a channel WITHOUT specifying a category, ALWAYS ask which category the channel should be placed in before creating it.
+- When a category is specified, use the "categoryName" parameter. Permissions automatically sync with the category.
+- If the user wants different permissions than the category, they can specify a "templateChannelName" to copy permissions from an existing channel.
+- The user can also provide a template channel WITHOUT a category. In that case, create the channel at the server root but copy the template channel's permissions.
+- Only create a channel without a category and without a template (visible to @everyone) if the user explicitly says they do NOT want a category or specific permissions.
+
 CONFIRMATION:
 All actions require explicit manual confirmation from the user. Never assume approval. After proposing an action, wait for the user to confirm or reject it.`}
 

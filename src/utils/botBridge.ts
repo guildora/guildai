@@ -135,10 +135,29 @@ export async function executeAction(
       }
 
       case 'create_channel': {
-        const { name, type, topic } = action.params
+        const { name, type, topic, categoryName, templateChannelName } = action.params
         if (!name) return { success: false, message: '', error: 'Missing channel name.' }
+
+        let parentId: string | undefined
+        let permissionOverwrites: Array<{ id: string; type: number; allow: string; deny: string }> | undefined
+
+        // Resolve category name to parentId
+        if (categoryName) {
+          const catResolved = await resolveChannelId(undefined, categoryName)
+          if ('error' in catResolved) return { success: false, message: '', error: catResolved.error }
+          parentId = catResolved.id
+        }
+
+        // Resolve template channel and copy its permissions
+        if (templateChannelName) {
+          const templateResolved = await resolveChannelId(undefined, templateChannelName)
+          if ('error' in templateResolved) return { success: false, message: '', error: templateResolved.error }
+          const permsData = await botRequest(`/internal/guild/channels/${encodeURIComponent(templateResolved.id)}/permissions`, { method: 'GET' })
+          permissionOverwrites = permsData.permissionOverwrites
+        }
+
         const result = await botRequest('/internal/guild/channels/create', {
-          body: { name, type: type || 'text', topic: topic || undefined }
+          body: { name, type: type || 'text', topic: topic || undefined, parentId, permissionOverwrites }
         })
         return { success: true, message: `Channel "${result.channelName}" created (ID: ${result.channelId}).` }
       }

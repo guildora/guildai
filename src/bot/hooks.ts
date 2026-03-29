@@ -512,10 +512,37 @@ async function executeActionInline(
     }
 
     case 'create_channel': {
-      const { name, type, topic } = action.params
+      const { name, type, topic, categoryName, templateChannelName } = action.params
       if (!name) return { success: false, message: de ? 'Fehlender Parameter (name).' : 'Missing parameter (name).' }
+
+      let parentId: string | undefined
+      let permissionOverwrites: Array<{ id: string; type: number; allow: string; deny: string }> | undefined
+
+      // Resolve category name to parentId
+      if (categoryName) {
+        const resolved = await resolveChannelByName(bot, categoryName)
+        if (!resolved) return { success: false, message: de ? `Kategorie "${categoryName}" nicht gefunden.` : `Category "${categoryName}" not found.` }
+        if ('ambiguous' in resolved) {
+          const options = resolved.ambiguous.map(c => `<#${c.id}>`).join(', ')
+          return { success: false, message: de ? `Mehrere Kategorien gefunden: ${options}` : `Multiple categories found: ${options}` }
+        }
+        parentId = resolved.id
+      }
+
+      // Resolve template channel and copy its permissions
+      if (templateChannelName) {
+        const resolved = await resolveChannelByName(bot, templateChannelName)
+        if (!resolved) return { success: false, message: de ? `Vorlage-Kanal "${templateChannelName}" nicht gefunden.` : `Template channel "${templateChannelName}" not found.` }
+        if ('ambiguous' in resolved) {
+          const options = resolved.ambiguous.map(c => `<#${c.id}>`).join(', ')
+          return { success: false, message: de ? `Mehrere Kanäle gefunden: ${options}` : `Multiple channels found: ${options}` }
+        }
+        const permsData = await botRequest(`/internal/guild/channels/${encodeURIComponent(resolved.id)}/permissions`, { method: 'GET' })
+        permissionOverwrites = permsData.permissionOverwrites
+      }
+
       const result = await botRequest('/internal/guild/channels/create', {
-        body: { name, type: type || 'text', topic: topic || undefined }
+        body: { name, type: type || 'text', topic: topic || undefined, parentId, permissionOverwrites }
       })
       return { success: true, message: de ? `Kanal "${result.channelName || name}" erstellt.` : `Channel "${result.channelName || name}" created.` }
     }
@@ -745,7 +772,7 @@ function buildChannelSystemPrompt(
   const ACTION_DESCRIPTIONS: Record<string, string> = {
     assign_role: '- [ACTION: assign_role] {"userId": "...", "roleId": "..."} : Assign a role to a member',
     remove_role: '- [ACTION: remove_role] {"userId": "...", "roleId": "..."} : Remove a role from a member',
-    create_channel: '- [ACTION: create_channel] {"name": "...", "type": "text|voice|category"} : Create a new channel or category',
+    create_channel: '- [ACTION: create_channel] {"name": "...", "type": "text|voice|category", "categoryName": "...", "templateChannelName": "..."} : Create a new channel. Use categoryName to place it in a category (permissions sync automatically). Use templateChannelName to copy permissions from another channel.',
     rename_channel: '- [ACTION: rename_channel] {"channelName": "...", "name": "..."} : Rename a channel (use plain channel name, Unicode is auto-normalized)',
     move_channel: '- [ACTION: move_channel] {"channelName": "...", "categoryName": "..."} : Move a channel to a category (use plain names, Unicode is auto-normalized)',
     send_message: '- [ACTION: send_message] {"channelName": "...", "content": "..."} : Send a message to a channel (use plain channel name, Unicode is auto-normalized)',
@@ -800,6 +827,13 @@ IMPORTANT ACTION RULES:
 - You may explain WHAT you are about to do, but do NOT claim it is already done.`}
 - You can ONLY use the actions listed above. Any other actions are not available to you.
 - If a user asks for an action you cannot perform, politely explain that this action is not available in the Discord channel and must be done in the **GuildAI Hub** web interface.
+
+CHANNEL CREATION RULES:
+- When a user asks to create a channel WITHOUT specifying a category, ALWAYS ask which category the channel should be placed in before creating it.
+- When a category is specified, use the "categoryName" parameter. Permissions automatically sync with the category.
+- If the user wants different permissions than the category, they can specify a "templateChannelName" to copy permissions from an existing channel.
+- The user can also provide a template channel WITHOUT a category. In that case, create the channel at the server root but copy the template channel's permissions.
+- Only create a channel without a category and without a template (visible to @everyone) if the user explicitly says they do NOT want a category or specific permissions.
 
 CRITICAL RULES:
 1. Always explain what you are about to do BEFORE proposing an action.

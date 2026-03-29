@@ -21,8 +21,8 @@ export const ACTION_TYPES: Record<string, ActionDefinition> = {
     description: 'Ban a user from the server'
   },
   create_channel: {
-    params: ['name', 'type', 'topic'],
-    description: 'Create a new Discord channel (topic sets the channel description)'
+    params: ['name', 'type', 'topic', 'categoryName', 'templateChannelName'],
+    description: 'Create a new Discord channel. Use categoryName to place it in a category (permissions sync automatically). Use templateChannelName to copy permissions from an existing channel.'
   },
   delete_channel: {
     params: ['channelName'],
