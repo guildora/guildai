@@ -1360,19 +1360,22 @@ exports.onMessage = async function onMessage(payload: MessagePayload, ctx: BotCo
 
     const actionResults: string[] = []
     let anyActionFailed = false
+    let responseSavedToConversation = false
 
     // In read-only mode: if AI generated actions despite instructions,
     // discard the AI text (which likely claims success) and send a read-only notice instead
     if (readOnly && actions.length > 0) {
       const actionNames = actions.map(a => `\`${a.type}\``).join(', ')
-      await ctx.bot.sendMessage(channelId, de
+      const readOnlyMsg = de
         ? `🔒 **Read-Only Modus aktiv** - Ich könnte die Aktion ${actionNames} ausführen, ` +
           `aber der Read-Only Modus ist aktiviert. Aktionen können aktuell nicht ausgeführt werden.\n` +
           `Ein Admin kann den Read-Only Modus in den **GuildAI-Einstellungen** deaktivieren.`
         : `🔒 **Read-Only Mode active** - I could perform the action ${actionNames}, ` +
           `but read-only mode is enabled. Actions cannot be executed right now.\n` +
           `An admin can disable read-only mode in the **GuildAI Settings**.`
-      )
+      await ctx.bot.sendMessage(channelId, readOnlyMsg)
+      messages.push({ role: 'assistant', content: readOnlyMsg })
+      responseSavedToConversation = true
     } else {
       // Check if any actions are blocked (user lacks permission on Discord)
       const blockedActions = actions.filter(a =>
@@ -1382,11 +1385,13 @@ exports.onMessage = async function onMessage(payload: MessagePayload, ctx: BotCo
       if (blockedActions.length > 0 && blockedActions.length === actions.length) {
         // ALL actions are blocked — suppress AI text (which likely claims success)
         // and send a natural-sounding response instead
-        await ctx.bot.sendMessage(channelId, de
+        const denialMsg = de
           ? 'Sorry, das kann ich leider nicht machen. Du hast nicht die nötigen Berechtigungen dafür.'
-          : "Sorry, I can't do that. You don't have the required permissions for this.")
-        actionResults.push(`❌ All actions DENIED: no permission`)
-        anyActionFailed = true
+          : "Sorry, I can't do that. You don't have the required permissions for this."
+        await ctx.bot.sendMessage(channelId, denialMsg)
+        // Save denial to conversation so the AI knows it already responded
+        messages.push({ role: 'assistant', content: denialMsg })
+        responseSavedToConversation = true
       } else {
         // Extract media markers before stripping
         const mediaMatches: Array<{ type: string; query: string }> = []
@@ -1477,9 +1482,9 @@ exports.onMessage = async function onMessage(payload: MessagePayload, ctx: BotCo
     }
 
     // Save final conversation state
-    // If actions failed, the retry logic already pushed messages (original assistant + error + retry response)
+    // If response was already saved (blocked actions, read-only, or retry logic), skip
     // Otherwise, save the assistant response normally with action results for context
-    if (!anyActionFailed) {
+    if (!anyActionFailed && !responseSavedToConversation) {
       messages.push({ role: 'assistant', content: aiResponse })
       if (actionResults.length > 0) {
         messages.push({ role: 'user', content: `[SYSTEM: Action results]\n${actionResults.join('\n')}` })
