@@ -186,6 +186,14 @@
                 <span class="checkbox-field__label">{{ t('settings.actions.loggingEnabledDesc') }}</span>
               </label>
             </div>
+
+            <div class="field">
+              <label class="field__label">{{ t('settings.actions.memoryEnabled') }}</label>
+              <label class="checkbox-field" for="memoryEnabled">
+                <input id="memoryEnabled" type="checkbox" v-model="form.memoryEnabled" class="checkbox-field__input" />
+                <span class="checkbox-field__label">{{ t('settings.actions.memoryEnabledDesc') }}</span>
+              </label>
+            </div>
           </div>
       </div>
 
@@ -346,6 +354,7 @@ const form = ref({
   confirmationTimeout: config.value?.confirmationTimeout ?? 60,
   readOnlyMode: config.value?.readOnlyMode ?? false,
   loggingEnabled: config.value?.loggingEnabled ?? true,
+  memoryEnabled: config.value?.memoryEnabled ?? true,
   customContext: config.value?.customContext ?? '',
   customPersonality: config.value?.customPersonality ?? '',
   discordMaxMessages: config.value?.discordMaxMessages ?? 10,
@@ -386,7 +395,9 @@ const actionOptions = [
   { value: 'delete_channel', label: t('actions.delete_channel') },
   { value: 'send_message', label: t('actions.send_message') },
   { value: 'delete_message', label: t('actions.delete_message') },
-  { value: 'create_skill', label: t('actions.create_skill') }
+  { value: 'create_skill', label: t('actions.create_skill') },
+  { value: 'save_memory', label: t('actions.save_memory') },
+  { value: 'delete_memory', label: t('actions.delete_memory') }
 ]
 
 // Helpers for comma-separated <-> array sync

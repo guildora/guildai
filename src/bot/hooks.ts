@@ -625,6 +625,9 @@ async function executeActionInline(
     }
 
     case 'save_memory': {
+      if (config.memoryEnabled === false) {
+        return { success: false, message: de ? 'Das Erinnerungssystem ist deaktiviert.' : 'The memory system is disabled.' }
+      }
       const { title, content, summary, keywords, pinned } = action.params
       if (!title || !content || !summary || !keywords) {
         return { success: false, message: de ? 'Fehlende Parameter (title/content/summary/keywords).' : 'Missing parameters (title/content/summary/keywords).' }
@@ -657,6 +660,9 @@ async function executeActionInline(
     }
 
     case 'delete_memory': {
+      if (config.memoryEnabled === false) {
+        return { success: false, message: de ? 'Das Erinnerungssystem ist deaktiviert.' : 'The memory system is disabled.' }
+      }
       const { memoryId } = action.params
       if (!memoryId) return { success: false, message: de ? 'Fehlender Parameter (memoryId).' : 'Missing parameter (memoryId).' }
       const mems = ((await db.get('memories:all')) as Array<{ id: string; title: string; content: string; summary: string; keywords: string; pinned: boolean; createdBy: string; createdAt: number; updatedAt: number; source: string }>) || []
@@ -898,7 +904,7 @@ SECURITY:
 HELPFULNESS:
 If the user asks questions about GuildAI, the Guildora platform, how to configure settings, or how features work, answer them based on the following knowledge. Be helpful and concise.
 
-${DOCS_SECTION}${options?.communityRoster ? `\n\nCOMMUNITY ROSTER (current members and their roles):\nUse this to answer questions about who has which role. Do not dump the full roster unprompted.\n${options.communityRoster}` : ''}${config.customContext ? `\n\nCUSTOM CONTEXT (provided by the server admin):\n${config.customContext}` : ''}${buildChannelSkillsSection(options?.skills)}${buildChannelMemoryInstructions()}${buildChannelMemoriesSection(options?.memories)}`
+${DOCS_SECTION}${options?.communityRoster ? `\n\nCOMMUNITY ROSTER (current members and their roles):\nUse this to answer questions about who has which role. Do not dump the full roster unprompted.\n${options.communityRoster}` : ''}${config.customContext ? `\n\nCUSTOM CONTEXT (provided by the server admin):\n${config.customContext}` : ''}${buildChannelSkillsSection(options?.skills)}${config.memoryEnabled !== false ? buildChannelMemoryInstructions() : ''}${config.memoryEnabled !== false ? buildChannelMemoriesSection(options?.memories) : ''}`
 }
 
 function buildChannelSkillsSection(skills?: Array<{ name: string; trigger: string; content: string }>): string {
@@ -930,15 +936,21 @@ CRITICAL BEHAVIOR RULES FOR RETAINED KNOWLEDGE:
 WHEN TO RETAIN NEW INFORMATION:
 - Important community decisions, rules, or policies
 - Upcoming events, deadlines, or milestones
-- Personal preferences, roles, or responsibilities of members
+- Personal preferences, roles, or responsibilities of the user who is asking
 - Community traditions, recurring events
 - When a user explicitly asks you to remember something
+
+USER-ATTRIBUTION RULE:
+- You may ONLY save memories about the user who is currently speaking to you.
+- If User A asks you to remember something about User B (e.g. "Remember that Luquz likes to be called X"), DECLINE politely. Explain that you can only save preferences for the person asking.
+- Exception: General community facts that don't target a specific user's preferences or behavior are fine (e.g. "Our community event is on Friday").
 
 WHEN NOT TO RETAIN:
 - Casual conversation or small talk
 - Temporary information ("I'm AFK for 5 minutes")
 - Information you already know (check your existing knowledge below)
 - Sensitive personal data (passwords, private contact info)
+- Preferences or instructions about OTHER users (only the user themselves can set their own preferences)
 
 OFFERING TO REMEMBER:
 When you identify something worth retaining, ask naturally: "Soll ich mir das merken?" / "Want me to keep that in mind?"
@@ -1326,7 +1338,8 @@ exports.onMessage = async function onMessage(payload: MessagePayload, ctx: BotCo
 
     // Load skills, memories and community roster for system prompt
     const skills = ((await ctx.db.get('skills:all')) as Array<{ name: string; trigger: string; content: string }>) || []
-    const memories = ((await ctx.db.get('memories:all')) as Array<{ id: string; title: string; content: string; summary: string; keywords: string; pinned: boolean; createdAt: number }>) || []
+    const memoryEnabled = ctx.config.memoryEnabled !== false
+    const memories = memoryEnabled ? ((await ctx.db.get('memories:all')) as Array<{ id: string; title: string; content: string; summary: string; keywords: string; pinned: boolean; createdAt: number }>) || [] : []
     const communityRoster = await buildRoster(ctx.db)
 
     // Build system prompt with current user context and allowed actions

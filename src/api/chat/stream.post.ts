@@ -62,7 +62,7 @@ export default defineEventHandler(async (event) => {
   // Build system prompt
   const klipyApiKey = await db.get('secrets:klipyApiKey')
   const skills = (await db.get('skills:all') as any[]) || []
-  const memories = (await db.get('memories:all') as Memory[]) || []
+  const memories = config.memoryEnabled !== false ? (await db.get('memories:all') as Memory[]) || [] : []
   const communityRoster = await buildCommunityRoster(db, botRequest)
   const systemPrompt = buildSystemPrompt(config, guildId, { hasGifApi: !!klipyApiKey, skills, memories, allowedActions: userAllowedActions, communityRoster })
 

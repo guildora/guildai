@@ -105,7 +105,7 @@ SECURITY:
 HELPFULNESS:
 If the user asks questions about GuildAI, the Guildora platform, how to configure settings, or how features work, answer them based on the following knowledge. Be helpful and concise.
 
-${getDocsSection()}${options?.communityRoster ? `\n\nCOMMUNITY ROSTER (current members and their roles):\nUse this to answer questions about who has which role. Do not dump the full roster unprompted.\n${options.communityRoster}` : ''}${config.customContext ? `\n\nCUSTOM CONTEXT (provided by the server admin):\n${config.customContext}` : ''}${buildSkillsSection(options?.skills)}${getMemoryInstructions()}${buildMemoriesSection(options?.memories)}`
+${getDocsSection()}${options?.communityRoster ? `\n\nCOMMUNITY ROSTER (current members and their roles):\nUse this to answer questions about who has which role. Do not dump the full roster unprompted.\n${options.communityRoster}` : ''}${config.customContext ? `\n\nCUSTOM CONTEXT (provided by the server admin):\n${config.customContext}` : ''}${buildSkillsSection(options?.skills)}${config.memoryEnabled !== false ? getMemoryInstructions() : ''}${config.memoryEnabled !== false ? buildMemoriesSection(options?.memories) : ''}`
 }
 
 function buildSkillsSection(skills?: Skill[]): string {

@@ -96,6 +96,11 @@ export default defineEventHandler(async (event) => {
     return { ok: true, approved: true, result: skillResult }
   }
 
+  // Block memory actions when memory system is disabled
+  if ((action.type === 'save_memory' || action.type === 'delete_memory') && config.memoryEnabled === false) {
+    return { ok: true, approved: true, result: { success: false, message: '', error: 'The memory system is disabled.' } }
+  }
+
   // Handle save_memory locally (not via bot bridge)
   if (action.type === 'save_memory') {
     const validationError = validateMemory(action.params)

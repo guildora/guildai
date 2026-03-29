@@ -124,7 +124,9 @@
       "readOnlyMode": "Read-Only Mode",
       "readOnlyModeDesc": "Simulate actions without executing them (for testing)",
       "loggingEnabled": "Action Logging",
-      "loggingEnabledDesc": "Log all executed actions (90-day retention)"
+      "loggingEnabledDesc": "Log all executed actions (90-day retention)",
+      "memoryEnabled": "Memory System",
+      "memoryEnabledDesc": "Allow the AI to retain and recall information across conversations. When disabled, no memories are loaded or saved."
     },
     "skills": {
       "heading": "Skill Library",

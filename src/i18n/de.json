@@ -124,7 +124,9 @@
       "readOnlyMode": "Nur-Lesen-Modus",
       "readOnlyModeDesc": "Aktionen simulieren ohne auszuführen (zum Testen)",
       "loggingEnabled": "Aktions-Protokollierung",
-      "loggingEnabledDesc": "Alle ausgeführten Aktionen protokollieren (90 Tage Aufbewahrung)"
+      "loggingEnabledDesc": "Alle ausgeführten Aktionen protokollieren (90 Tage Aufbewahrung)",
+      "memoryEnabled": "Erinnerungssystem",
+      "memoryEnabledDesc": "Erlaubt der KI, Informationen über Gespräche hinweg zu speichern und abzurufen. Wenn deaktiviert, werden keine Erinnerungen geladen oder gespeichert."
     },
     "skills": {
       "heading": "Skill-Bibliothek",
