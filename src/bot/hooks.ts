@@ -39,7 +39,7 @@ const ALL_KNOWN_ACTIONS = [
   'assign_role', 'remove_role', 'kick_user', 'ban_user',
   'create_channel', 'rename_channel', 'move_channel', 'delete_channel',
   'send_message', 'delete_message', 'create_skill',
-  'save_memory', 'delete_memory'
+  'save_memory', 'delete_memory' // Memory actions are kept here for permission checks but removed from Discord prompt
 ]
 const MEDIA_PATTERN = /\[(GIF|STICKER|CLIP):\s*([^\]]+)\]/g
 
@@ -796,8 +796,7 @@ function buildChannelSystemPrompt(
     ban_user: '- [ACTION: ban_user] {"userId": "...", "reason": "..."} : Ban a user from the server',
     delete_channel: '- [ACTION: delete_channel] {"channelName": "..."} : Delete a Discord channel (use plain channel name)',
     delete_message: '- [ACTION: delete_message] {"channelName": "...", "messageId": "..."} : Delete a message from a channel (use plain channel name)',
-    save_memory: '- [ACTION: save_memory] {"title": "...", "content": "...", "summary": "...", "keywords": "...", "pinned": false} : Retain important information about the guild. Set pinned to true for crucial permanent facts.',
-    delete_memory: '- [ACTION: delete_memory] {"memoryId": "..."} : Delete a saved memory by its ID'
+    // Memory actions are only available through the Hub (admin only), not via Discord chat
   }
 
   // Use allowedActions if provided, otherwise fall back to all known actions
@@ -917,7 +916,7 @@ ${entries}`
 
 function buildChannelMemoryInstructions(): string {
   return `\n\nINTERNAL KNOWLEDGE SYSTEM:
-You have the ability to retain information across conversations. Below you may find facts, context, and knowledge you have previously learned about this community.
+Below you may find facts, context, and knowledge that admins have saved about this community.
 
 CRITICAL BEHAVIOR RULES FOR RETAINED KNOWLEDGE:
 - NEVER mention "memories", "key memories", "Erinnerungen", "gespeicherte Informationen", or any reference to a memory/storage system in your responses.
@@ -926,32 +925,9 @@ CRITICAL BEHAVIOR RULES FOR RETAINED KNOWLEDGE:
 - Use natural phrasing like "Soweit ich weiß...", "Ich erinnere mich, dass...", "Da war doch...", "I recall that...", "As far as I know..." as if recalling from personal experience.
 - When multiple pieces of knowledge relate to the same topic, synthesize and combine them into a coherent understanding rather than presenting them as separate items.
 - Only surface relevant knowledge when it genuinely fits the conversation. Do not volunteer unrelated information.
-
-WHEN TO RETAIN NEW INFORMATION:
-- Important community decisions, rules, or policies
-- Upcoming events, deadlines, or milestones
-- Personal preferences, roles, or responsibilities of members
-- Community traditions, recurring events
-- When a user explicitly asks you to remember something
-
-WHEN NOT TO RETAIN:
-- Casual conversation or small talk
-- Temporary information ("I'm AFK for 5 minutes")
-- Information you already know (check your existing knowledge below)
-- Sensitive personal data (passwords, private contact info)
-
-OFFERING TO REMEMBER:
-When you identify something worth retaining, ask naturally: "Soll ich mir das merken?" / "Want me to keep that in mind?"
-Do NOT say "save as a memory" or reference any storage system.
-If they agree, use save_memory with ALL fields:
-- title: Short descriptive title (max 100 chars)
-- content: Full detailed information (max 1000 chars)
-- summary: Compressed version with key facts (max 300 chars)
-- keywords: Comma-separated keywords (max 100 chars)
-- pinned: true for crucial permanent information, false for regular
-
-FORGETTING:
-If asked to forget something, find the matching ID from your knowledge below and use delete_memory. Do not explain the technical process.`
+- You CANNOT save, create, or delete memories in Discord chat. Memories are managed exclusively by admins through the GuildAI Hub.
+- If a user asks you to remember something, politely explain that key memories can only be managed by admins in the GuildAI settings.
+- Do NOT offer to remember things or suggest saving information.`
 }
 
 function buildChannelMemoriesSection(memories?: Array<{ id: string; title: string; content: string; summary: string; keywords: string; pinned: boolean; createdAt: number }>): string {
@@ -976,15 +952,15 @@ function buildChannelMemoriesSection(memories?: Array<{ id: string; title: strin
     let line: string
 
     if (mem.pinned) {
-      line = `- [pinned] ${mem.title} [id:${mem.id}]: ${mem.content}`
+      line = `- [pinned] ${mem.title}: ${mem.content}`
     } else if (age < DAY) {
-      line = `- ${mem.title} [id:${mem.id}]: ${mem.content}`
+      line = `- ${mem.title}: ${mem.content}`
     } else if (age < WEEK) {
-      line = `- ${mem.title} [id:${mem.id}]: ${mem.summary}`
+      line = `- ${mem.title}: ${mem.summary}`
     } else if (age < MONTH) {
-      line = `- ${mem.title} [id:${mem.id}] (${mem.keywords})`
+      line = `- ${mem.title} (${mem.keywords})`
     } else {
-      line = `- ${mem.title} [id:${mem.id}] (${mem.keywords})`
+      line = `- ${mem.title} (${mem.keywords})`
     }
 
     if (totalChars + line.length + 1 > maxChars) {
