@@ -247,14 +247,34 @@
           <h2 class="mb-4 text-base font-semibold text-[var(--color-text-primary)]">{{ t('settings.channel.heading') }}</h2>
           <div class="flex flex-col gap-4">
             <div class="field">
+              <label class="field__label">{{ t('settings.channel.enabled') }}</label>
+              <label class="checkbox-field" for="discordChatEnabled">
+                <input id="discordChatEnabled" type="checkbox" v-model="form.discordChatEnabled" class="checkbox-field__input" />
+                <span class="checkbox-field__label">{{ t('settings.channel.enabledDesc') }}</span>
+              </label>
+            </div>
+
+            <div class="field" :class="{ 'opacity-50 pointer-events-none': !form.discordChatEnabled }">
               <label class="field__label" for="aiChatChannelId">{{ t('settings.channel.channelId') }}</label>
               <div class="field__control">
-                <input id="aiChatChannelId" v-model="form.aiChatChannelId" type="text" class="field__input font-mono" placeholder="z.B. 1234567890123456789" />
+                <select v-if="!channelsLoading && guildChannels.length" id="aiChatChannelId" v-model="form.aiChatChannelId" class="field__select">
+                  <option value="">{{ t('settings.channel.selectChannel') }}</option>
+                  <template v-for="[parentId, channels] in textChannels.categories" :key="parentId ?? '_none'">
+                    <optgroup v-if="categoryName(parentId)" :label="categoryName(parentId)">
+                      <option v-for="ch in channels" :key="ch.id" :value="ch.id"># {{ ch.name }}</option>
+                    </optgroup>
+                    <template v-else>
+                      <option v-for="ch in channels" :key="ch.id" :value="ch.id"># {{ ch.name }}</option>
+                    </template>
+                  </template>
+                </select>
+                <div v-else-if="channelsLoading" class="text-sm text-[var(--color-text-secondary)]">{{ t('settings.channel.loadingChannels') }}</div>
+                <input v-else id="aiChatChannelId" v-model="form.aiChatChannelId" type="text" class="field__input font-mono" placeholder="z.B. 1234567890123456789" />
               </div>
               <span class="field__hint">{{ t('settings.channel.channelIdHint') }}</span>
             </div>
 
-            <div class="field">
+            <div class="field" :class="{ 'opacity-50 pointer-events-none': !form.discordChatEnabled }">
               <label class="field__label" for="discordMaxMessages">{{ t('settings.channel.maxMessages') }}</label>
               <div class="field__control">
                 <input id="discordMaxMessages" v-model.number="form.discordMaxMessages" type="number" min="4" max="40" class="field__input w-32" />
@@ -262,7 +282,7 @@
               <span class="field__hint">{{ t('settings.channel.maxMessagesHint') }}</span>
             </div>
 
-            <div class="field">
+            <div class="field" :class="{ 'opacity-50 pointer-events-none': !form.discordChatEnabled }">
               <label class="field__label">{{ t('settings.channel.imageRecognition') }}</label>
               <label class="checkbox-field" for="imageRecognitionEnabled">
                 <input id="imageRecognitionEnabled" type="checkbox" v-model="form.imageRecognitionEnabled" class="checkbox-field__input" />
@@ -270,9 +290,9 @@
               </label>
             </div>
 
-            <p class="text-xs text-[var(--color-text-tertiary)]">{{ t('settings.channel.safeActionsHint') }}</p>
+            <p class="text-xs text-[var(--color-text-tertiary)]" :class="{ 'opacity-50': !form.discordChatEnabled }">{{ t('settings.channel.safeActionsHint') }}</p>
 
-            <div class="flex items-center gap-3">
+            <div class="flex items-center gap-3" :class="{ 'opacity-50 pointer-events-none': !form.discordChatEnabled }">
               <button
                 type="button"
                 class="btn btn--secondary text-sm"
@@ -325,7 +345,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useI18n, useFetch, $fetch } from '@guildora/hub'
 import MultiSelect from '../components/MultiSelect.vue'
 import PermissionMatrix from '../components/PermissionMatrix.vue'
@@ -333,6 +353,38 @@ import PermissionMatrix from '../components/PermissionMatrix.vue'
 const { t } = useI18n()
 
 const { data: config, pending, error } = await useFetch('/api/apps/guildai/config')
+
+// ─── Discord channels ──────────────────────────────────────────────────────
+const guildChannels = ref([])
+const channelsLoading = ref(true)
+
+onMounted(async () => {
+  try {
+    const result = await $fetch('/api/admin/discord-channels')
+    guildChannels.value = result.channels
+  } catch {
+    // ignore
+  } finally {
+    channelsLoading.value = false
+  }
+})
+
+const textChannels = computed(() => {
+  const categories = new Map()
+  for (const ch of guildChannels.value) {
+    if (ch.type !== 'text') continue
+    const parent = ch.parentId || null
+    if (!categories.has(parent)) categories.set(parent, [])
+    categories.get(parent).push(ch)
+  }
+  return { categories, all: guildChannels.value }
+})
+
+const categoryName = (parentId) => {
+  if (!parentId) return null
+  const cat = guildChannels.value.find((ch) => ch.id === parentId && ch.type === 'category')
+  return cat?.name ?? null
+}
 
 const form = ref({
   botName: config.value?.botName ?? 'GuildAI',
@@ -360,6 +412,7 @@ const form = ref({
   discordMaxMessages: config.value?.discordMaxMessages ?? 10,
   imageRecognitionEnabled: config.value?.imageRecognitionEnabled ?? true,
   klipyApiKey: '',
+  discordChatEnabled: config.value?.discordChatEnabled ?? false,
   aiChatChannelId: config.value?.aiChatChannelId ?? '',
   aiChatChannelAutoExecuteActions: config.value?.aiChatChannelAutoExecuteActions ?? true,
   actionPermissions: config.value?.actionPermissions ?? {

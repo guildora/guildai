@@ -107,7 +107,7 @@ export default defineEventHandler(async (event) => {
     'rateLimitPerMinute', 'rateLimitPerRole', 'confirmationTimeout',
     'allowedSkillPageRoles', 'allowedSkillManageRoles', 'allowedSkillCreateRoles',
     'actionPermissions', 'promptCachingEnabled', 'readOnlyMode', 'loggingEnabled',
-    'customContext', 'customPersonality', 'discordMaxMessages', 'imageRecognitionEnabled', 'aiChatChannelId'
+    'customContext', 'customPersonality', 'discordChatEnabled', 'discordMaxMessages', 'imageRecognitionEnabled', 'aiChatChannelId'
   ]
 
   for (const key of configKeys) {
@@ -135,7 +135,7 @@ export default defineEventHandler(async (event) => {
   const newChannelId = body.aiChatChannelId as string | undefined
   const previousChannelId = (config.aiChatChannelId as string) || ''
 
-  if (newChannelId && newChannelId !== previousChannelId) {
+  if (newChannelId && newChannelId !== previousChannelId && body.discordChatEnabled !== false) {
     const lang = (body.defaultLanguage ?? config.defaultLanguage ?? 'en') as string
     const introMessage = lang === 'de'
       ? [

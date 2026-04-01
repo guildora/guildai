@@ -1222,7 +1222,8 @@ exports.onMessage = async function onMessage(payload: MessagePayload, ctx: BotCo
     Object.assign(ctx.config, freshConfig)
   }
 
-  // Only respond in the configured AI chat channel
+  // Only respond when Discord chat is enabled and in the configured channel
+  if (!ctx.config.discordChatEnabled) return
   const configuredChannel = ctx.config.aiChatChannelId as string
   if (!configuredChannel || channelId !== configuredChannel) return
 
