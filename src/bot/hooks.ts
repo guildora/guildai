@@ -28,6 +28,7 @@ interface BotContext {
     listTextChannels(): Promise<Array<{ id: string; name: string }>>
   }
   botUserId: string
+  guildId: string
 }
 
 // ─── Constants ──────────────────────────────────────────────────────────────
@@ -1232,6 +1233,9 @@ function extractMentionContent(content: string, botUserId: string, roleId?: stri
 exports.onMessage = async function onMessage(payload: MessagePayload, ctx: BotContext) {
   const { channelId, memberId, content, guildId } = payload
 
+  // Ignore messages from other guilds (multiple bot instances may share the same Discord token)
+  if (ctx.guildId && guildId !== ctx.guildId) return
+
   // Read fresh config from KV store (mirrors config saved by Hub settings)
   const freshConfig = (await ctx.db.get('config:current')) as Record<string, unknown> | null
   if (freshConfig && Object.keys(freshConfig).length > 0) {
@@ -1259,6 +1263,24 @@ exports.onMessage = async function onMessage(payload: MessagePayload, ctx: BotCo
     }
   }
   if (!mode) return
+
+  // Deduplicate: prevent processing the same message twice
+  // (can happen when multiple bot instances run during deployments)
+  const dedupeKey = `msg-seen:${payload.messageId}`
+  if (await ctx.db.get(dedupeKey)) return
+  await ctx.db.set(dedupeKey, { t: Date.now() })
+
+  // Probabilistic cleanup of old dedup keys (~1% of requests)
+  if (Math.random() < 0.01) {
+    try {
+      const oldKeys = await ctx.db.list('msg-seen:')
+      const cutoff = Date.now() - 60_000 // 1 minute
+      for (const entry of oldKeys) {
+        const val = entry.value as { t: number } | null
+        if (val && val.t < cutoff) await ctx.db.delete(entry.key)
+      }
+    } catch {}
+  }
 
   // Ignore empty messages (unless they have image attachments)
   if ((!processedContent || !processedContent.trim()) && (!payload.attachments || payload.attachments.length === 0)) return
