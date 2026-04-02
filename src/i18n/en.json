@@ -172,6 +172,17 @@
       "resetting": "Resetting...",
       "resetSuccess": "Conversation reset."
     },
+    "mention": {
+      "heading": "Discord Mentions",
+      "enabled": "Mention Mode",
+      "enabledDesc": "Allow the bot to respond when mentioned in any channel.",
+      "roleId": "Bot Role",
+      "roleIdHint": "Select a Discord role the bot has. Users can mention this role to trigger the bot.",
+      "selectRole": "Direct mention only…",
+      "loadingRoles": "Loading roles…",
+      "maxMessages": "Context Messages",
+      "maxMessagesHint": "Maximum number of message pairs kept in mention conversation context (default: 6)."
+    },
     "mcp": {
       "heading": "MCP Server",
       "token": "Authentication Token",

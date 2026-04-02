@@ -172,6 +172,17 @@
       "resetting": "Wird zurückgesetzt...",
       "resetSuccess": "Konversation zurückgesetzt."
     },
+    "mention": {
+      "heading": "Discord Erwähnungen",
+      "enabled": "Erwähnungsmodus",
+      "enabledDesc": "Bot antwortet auf Erwähnungen in jedem Kanal.",
+      "roleId": "Bot-Rolle",
+      "roleIdHint": "Discord-Rolle auswählen die der Bot besitzt. Nutzer können diese Rolle erwähnen um den Bot zu aktivieren.",
+      "selectRole": "Nur Direkterwähnung…",
+      "loadingRoles": "Rollen werden geladen…",
+      "maxMessages": "Kontext-Nachrichten",
+      "maxMessagesHint": "Maximale Anzahl an Nachrichten-Paaren im Erwähnungs-Kontext (Standard: 6)."
+    },
     "mcp": {
       "heading": "MCP-Server",
       "token": "Authentifizierungs-Token",

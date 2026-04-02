@@ -75,6 +75,21 @@ export default defineEventHandler(async (event) => {
     }
   }
 
+  // Validate discordMentionRoleId (must be numeric Discord snowflake or empty)
+  if (body.discordMentionRoleId !== undefined && body.discordMentionRoleId !== '') {
+    if (typeof body.discordMentionRoleId !== 'string' || !/^\d{17,20}$/.test(body.discordMentionRoleId)) {
+      throw createError({ statusCode: 400, message: 'discordMentionRoleId must be a valid Discord role ID (numeric).' })
+    }
+  }
+
+  // Validate discordMentionMaxMessages
+  if (body.discordMentionMaxMessages !== undefined) {
+    const n = Number(body.discordMentionMaxMessages)
+    if (isNaN(n) || n < 2 || n > 20) {
+      throw createError({ statusCode: 400, message: 'discordMentionMaxMessages must be between 2 and 20.' })
+    }
+  }
+
   // Validate actionPermissions
   if (body.actionPermissions !== undefined && body.actionPermissions !== null) {
     const permsValue = typeof body.actionPermissions === 'string'
@@ -107,7 +122,8 @@ export default defineEventHandler(async (event) => {
     'rateLimitPerMinute', 'rateLimitPerRole', 'confirmationTimeout',
     'allowedSkillPageRoles', 'allowedSkillManageRoles', 'allowedSkillCreateRoles',
     'actionPermissions', 'promptCachingEnabled', 'readOnlyMode', 'loggingEnabled',
-    'customContext', 'customPersonality', 'discordChatEnabled', 'discordMaxMessages', 'imageRecognitionEnabled', 'aiChatChannelId'
+    'customContext', 'customPersonality', 'discordChatEnabled', 'discordMaxMessages', 'imageRecognitionEnabled', 'aiChatChannelId',
+    'discordMentionEnabled', 'discordMentionRoleId', 'discordMentionMaxMessages'
   ]
 
   for (const key of configKeys) {

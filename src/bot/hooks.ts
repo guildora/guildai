@@ -783,7 +783,7 @@ function buildChannelSystemPrompt(
   config: Record<string, unknown>,
   guildId: string,
   currentUser: { memberId: string; displayName: string },
-  options?: { hasGifApi?: boolean; skills?: Array<{ name: string; trigger: string; content: string }>; allowedActions?: string[]; communityRoster?: string; memories?: Array<{ id: string; title: string; content: string; summary: string; keywords: string; pinned: boolean; createdAt: number }> }
+  options?: { hasGifApi?: boolean; mentionMode?: boolean; skills?: Array<{ name: string; trigger: string; content: string }>; allowedActions?: string[]; communityRoster?: string; memories?: Array<{ id: string; title: string; content: string; summary: string; keywords: string; pinned: boolean; createdAt: number }> }
 ): string {
   const readOnly = config.readOnlyMode ?? false
   const botName = (config.botName as string) || 'GuildAI'
@@ -877,6 +877,7 @@ CHANNEL CONTEXT:
 - Always address users by their display name or with <@userId> mentions.
 - Keep responses concise but friendly. This is a Discord channel, not a long-form chat.
 - Be casual, approachable, and talk at eye level. You are a community member, not a corporate assistant.
+${options?.mentionMode ? `- You were summoned into this conversation via a mention. Keep your response focused and to the point. You may not have full context of the ongoing conversation.` : ''}
 - Format responses in Discord Markdown when helpful.
 - Invite further questions when it feels natural.
 - Use emojis sparingly and naturally, only where they genuinely fit the tone. Do not overdo it.
@@ -1211,6 +1212,21 @@ async function summarizeOldMessages(
   }
 }
 
+// ─── Mention detection ──────────────────────────────────────────────────────
+
+function extractMentionContent(content: string, botUserId: string, roleId?: string): string | null {
+  const botMentionPattern = `<@!?${botUserId}>`
+  const roleMentionPattern = roleId ? `<@&${roleId}>` : null
+
+  if (new RegExp(botMentionPattern).test(content)) {
+    return content.replace(new RegExp(botMentionPattern, 'g'), '').trim()
+  }
+  if (roleMentionPattern && new RegExp(roleMentionPattern).test(content)) {
+    return content.replace(new RegExp(roleMentionPattern, 'g'), '').trim()
+  }
+  return null
+}
+
 // ─── Hook handler ───────────────────────────────────────────────────────────
 
 exports.onMessage = async function onMessage(payload: MessagePayload, ctx: BotContext) {
@@ -1222,16 +1238,33 @@ exports.onMessage = async function onMessage(payload: MessagePayload, ctx: BotCo
     Object.assign(ctx.config, freshConfig)
   }
 
-  // Only respond when Discord chat is enabled and in the configured channel
-  if (!ctx.config.discordChatEnabled) return
+  // Determine response mode: dedicated channel or mention
+  let mode: 'channel' | 'mention' | null = null
+  let processedContent = content
+
   const configuredChannel = ctx.config.aiChatChannelId as string
-  if (!configuredChannel || channelId !== configuredChannel) return
+  if (ctx.config.discordChatEnabled && configuredChannel && channelId === configuredChannel) {
+    mode = 'channel'
+  } else if (ctx.config.discordMentionEnabled) {
+    // In mention mode, also respond to replies directed at the bot (no re-mention needed)
+    if (payload.replyToUserId && payload.replyToUserId === ctx.botUserId) {
+      mode = 'mention'
+    } else {
+      const mentionRoleId = (ctx.config.discordMentionRoleId as string) || undefined
+      const cleaned = extractMentionContent(content || '', ctx.botUserId, mentionRoleId)
+      if (cleaned !== null) {
+        mode = 'mention'
+        processedContent = cleaned
+      }
+    }
+  }
+  if (!mode) return
 
   // Ignore empty messages (unless they have image attachments)
-  if ((!content || !content.trim()) && (!payload.attachments || payload.attachments.length === 0)) return
+  if ((!processedContent || !processedContent.trim()) && (!payload.attachments || payload.attachments.length === 0)) return
 
-  // Ignore replies to other users (only respond to replies directed at the bot)
-  if (payload.replyToUserId && payload.replyToUserId !== ctx.botUserId) return
+  // In channel mode, ignore replies to other users (only respond to replies directed at the bot)
+  if (mode === 'channel' && payload.replyToUserId && payload.replyToUserId !== ctx.botUserId) return
 
   // Rate limit (use global config, default 10/min)
   const rateLimit = (ctx.config.rateLimitPerMinute as number) || 10
@@ -1295,7 +1328,7 @@ exports.onMessage = async function onMessage(payload: MessagePayload, ctx: BotCo
     const provider = (ctx.config.apiProvider as string) || 'anthropic'
 
     // Append user message with display name attribution
-    const userText = `[${displayName} <@${memberId}>]: ${content || ''}`
+    const userText = `[${displayName} <@${memberId}>]: ${processedContent || ''}`
     const imageRecognitionEnabled = ctx.config.imageRecognitionEnabled !== false
     if (imageRecognitionEnabled && payload.attachments && payload.attachments.length > 0) {
       const contentParts: Array<any> = []
@@ -1312,8 +1345,10 @@ exports.onMessage = async function onMessage(payload: MessagePayload, ctx: BotCo
       messages.push({ role: 'user', content: userText })
     }
 
-    // Trim to max messages (configurable)
-    const maxPairs = (ctx.config.discordMaxMessages as number) || DEFAULT_DISCORD_MAX_MESSAGES
+    // Trim to max messages (configurable, mention mode uses its own limit)
+    const maxPairs = mode === 'mention'
+      ? (ctx.config.discordMentionMaxMessages as number) || 6
+      : (ctx.config.discordMaxMessages as number) || DEFAULT_DISCORD_MAX_MESSAGES
     while (messages.length > maxPairs * 2) {
       messages.shift()
     }
@@ -1347,7 +1382,7 @@ exports.onMessage = async function onMessage(payload: MessagePayload, ctx: BotCo
     const systemPrompt = buildChannelSystemPrompt(ctx.config, guildId, {
       memberId,
       displayName
-    }, { hasGifApi: !!klipyApiKey, skills, memories, allowedActions: userPerms.allowedActions, communityRoster })
+    }, { hasGifApi: !!klipyApiKey, mentionMode: mode === 'mention', skills, memories, allowedActions: userPerms.allowedActions, communityRoster })
 
     let aiResponse: string
     try {

@@ -306,6 +306,41 @@
           </div>
       </div>
 
+      <!-- Discord Mentions -->
+      <div class="card">
+          <h2 class="mb-4 text-base font-semibold text-[var(--color-text-primary)]">{{ t('settings.mention.heading') }}</h2>
+          <div class="flex flex-col gap-4">
+            <div class="field">
+              <label class="field__label">{{ t('settings.mention.enabled') }}</label>
+              <label class="checkbox-field" for="discordMentionEnabled">
+                <input id="discordMentionEnabled" type="checkbox" v-model="form.discordMentionEnabled" class="checkbox-field__input" />
+                <span class="checkbox-field__label">{{ t('settings.mention.enabledDesc') }}</span>
+              </label>
+            </div>
+
+            <div class="field" :class="{ 'opacity-50 pointer-events-none': !form.discordMentionEnabled }">
+              <label class="field__label" for="discordMentionRoleId">{{ t('settings.mention.roleId') }}</label>
+              <div class="field__control">
+                <select v-if="!rolesLoading && guildRoles.length" id="discordMentionRoleId" v-model="form.discordMentionRoleId" class="field__select">
+                  <option value="">{{ t('settings.mention.selectRole') }}</option>
+                  <option v-for="role in guildRoles" :key="role.id" :value="role.id">@{{ role.name }}</option>
+                </select>
+                <div v-else-if="rolesLoading" class="text-sm text-[var(--color-text-secondary)]">{{ t('settings.mention.loadingRoles') }}</div>
+                <input v-else id="discordMentionRoleId" v-model="form.discordMentionRoleId" type="text" class="field__input font-mono" placeholder="Role ID" />
+              </div>
+              <span class="field__hint">{{ t('settings.mention.roleIdHint') }}</span>
+            </div>
+
+            <div class="field" :class="{ 'opacity-50 pointer-events-none': !form.discordMentionEnabled }">
+              <label class="field__label" for="discordMentionMaxMessages">{{ t('settings.mention.maxMessages') }}</label>
+              <div class="field__control">
+                <input id="discordMentionMaxMessages" v-model.number="form.discordMentionMaxMessages" type="number" min="2" max="20" class="field__input w-32" />
+              </div>
+              <span class="field__hint">{{ t('settings.mention.maxMessagesHint') }}</span>
+            </div>
+          </div>
+      </div>
+
       <!-- MCP Server -->
       <div class="card">
           <h2 class="mb-4 text-base font-semibold text-[var(--color-text-primary)]">{{ t('settings.mcp.heading') }}</h2>
@@ -354,19 +389,24 @@ const { t } = useI18n()
 
 const { data: config, pending, error } = await useFetch('/api/apps/guildai/config')
 
-// ─── Discord channels ──────────────────────────────────────────────────────
+// ─── Discord channels & roles ───────────────────────────────────────────────
 const guildChannels = ref([])
 const channelsLoading = ref(true)
+const guildRoles = ref([])
+const rolesLoading = ref(true)
 
 onMounted(async () => {
-  try {
-    const result = await $fetch('/api/admin/discord-channels')
-    guildChannels.value = result.channels
-  } catch {
-    // ignore
-  } finally {
-    channelsLoading.value = false
-  }
+  const channelsPromise = $fetch('/api/admin/discord-channels')
+    .then((result) => { guildChannels.value = result.channels })
+    .catch(() => {})
+    .finally(() => { channelsLoading.value = false })
+
+  const rolesPromise = $fetch('/api/admin/discord-roles')
+    .then((result) => { guildRoles.value = result.guildRoles.filter((r) => r.managed).sort((a, b) => b.position - a.position) })
+    .catch(() => {})
+    .finally(() => { rolesLoading.value = false })
+
+  await Promise.all([channelsPromise, rolesPromise])
 })
 
 const textChannels = computed(() => {
@@ -415,6 +455,9 @@ const form = ref({
   discordChatEnabled: config.value?.discordChatEnabled ?? false,
   aiChatChannelId: config.value?.aiChatChannelId ?? '',
   aiChatChannelAutoExecuteActions: config.value?.aiChatChannelAutoExecuteActions ?? true,
+  discordMentionEnabled: config.value?.discordMentionEnabled ?? false,
+  discordMentionRoleId: config.value?.discordMentionRoleId ?? '',
+  discordMentionMaxMessages: config.value?.discordMentionMaxMessages ?? 6,
   actionPermissions: config.value?.actionPermissions ?? {
     temporaer: { blocked: true, actions: {} },
     user: { actions: { hub: [], discord: [] } },
