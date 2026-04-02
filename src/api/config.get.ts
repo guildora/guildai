@@ -42,6 +42,7 @@ export default defineEventHandler(async (event) => {
     loggingEnabled: config.loggingEnabled ?? true,
     customContext: config.customContext ?? '',
     customPersonality: config.customPersonality ?? '',
+    discordChatEnabled: config.discordChatEnabled ?? false,
     discordMaxMessages: config.discordMaxMessages ?? 10,
     imageRecognitionEnabled: config.imageRecognitionEnabled ?? true,
     aiChatChannelId: config.aiChatChannelId ?? '',
