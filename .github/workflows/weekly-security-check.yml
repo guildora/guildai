@@ -1,0 +1,300 @@
+name: Weekly Security Check
+
+on:
+  schedule:
+    - cron: '20 4 * * 4' # Donnerstag 04:20 UTC (06:20 MESZ)
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        if: hashFiles('pnpm-lock.yaml') != ''
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        if: hashFiles('pnpm-lock.yaml') != ''
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        if: hashFiles('pnpm-lock.yaml') != ''
+        run: pnpm install --frozen-lockfile
+
+      - name: Run Claude Code Security Scan
+        uses: anthropics/claude-code-base-action@beta
+        with:
+          prompt_file: .claude/security-check-prompt.md
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          allowed_tools: >-
+            Read,Write,Glob,Grep,
+            Bash(pnpm audit:*),Bash(ls:*),Bash(cat:*),Bash(head:*),
+            Bash(tail:*),Bash(node:*),Bash(wc:*),Bash(find:*)
+          max_turns: 30
+
+      - name: Parse security report
+        id: report
+        run: |
+          if [ ! -f security-report.json ]; then
+            echo "has_issues=false" >> "$GITHUB_OUTPUT"
+            echo "report_valid=false" >> "$GITHUB_OUTPUT"
+            echo "summary=Security scan completed but no report was generated." >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if ! python3 -c "import json; json.load(open('security-report.json'))" 2>/dev/null; then
+            echo "has_issues=true" >> "$GITHUB_OUTPUT"
+            echo "report_valid=false" >> "$GITHUB_OUTPUT"
+            echo "summary=Report was generated but contains invalid JSON." >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "report_valid=true" >> "$GITHUB_OUTPUT"
+
+          python3 << 'PYEOF'
+          import json, os
+
+          with open("security-report.json") as f:
+              report = json.load(f)
+
+          issues = report.get("issues", [])
+          has_issues = len(issues) > 0
+          risk_level = report.get("risk_level", "unknown")
+          summary = report.get("summary", "No summary available.")
+          dep = report.get("dependency_audit", {})
+
+          # Count by severity
+          counts = {"critical": 0, "high": 0, "medium": 0, "low": 0, "info": 0}
+          for issue in issues:
+              sev = issue.get("severity", "info")
+              if sev in counts:
+                  counts[sev] += 1
+
+          with open(os.environ["GITHUB_OUTPUT"], "a") as out:
+              out.write(f"has_issues={'true' if has_issues else 'false'}\n")
+              out.write(f"risk_level={risk_level}\n")
+              out.write(f"total={len(issues)}\n")
+              out.write(f"critical={counts['critical']}\n")
+              out.write(f"high={counts['high']}\n")
+              out.write(f"medium={counts['medium']}\n")
+              out.write(f"low={counts['low']}\n")
+              out.write(f"info={counts['info']}\n")
+              out.write(f"dep_ran={'true' if dep.get('ran') else 'false'}\n")
+              out.write(f"dep_critical={dep.get('critical', 0)}\n")
+              out.write(f"dep_high={dep.get('high', 0)}\n")
+
+          # Save summary to file (avoid multiline output issues)
+          with open("report-summary.txt", "w") as f:
+              f.write(summary)
+          PYEOF
+
+      - name: Create Linear issue
+        if: steps.report.outputs.has_issues == 'true'
+        env:
+          LINEAR_API_KEY: ${{ secrets.LINEAR_API_KEY }}
+          LINEAR_TEAM_ID: ${{ secrets.LINEAR_TEAM_ID }}
+        run: |
+          python3 << 'PYEOF'
+          import json, os, urllib.request
+
+          repo = os.environ.get("GITHUB_REPOSITORY", "unknown")
+          run_url = f"{os.environ['GITHUB_SERVER_URL']}/{repo}/actions/runs/{os.environ['GITHUB_RUN_ID']}"
+          critical = os.environ.get("critical", "0")
+          high = os.environ.get("high", "0")
+          medium = os.environ.get("medium", "0")
+
+          # Read full report for Linear issue body
+          body_parts = [f"**Repository:** {repo}", f"**Workflow Run:** {run_url}", ""]
+
+          if os.path.exists("security-report.json"):
+              with open("security-report.json") as f:
+                  report = json.load(f)
+
+              summary = report.get("summary", "")
+              if summary:
+                  body_parts.append(f"## Summary\n{summary}\n")
+
+              issues = report.get("issues", [])
+              if issues:
+                  body_parts.append("## Findings\n")
+                  for issue in issues:
+                      sev = issue.get("severity", "?").upper()
+                      title = issue.get("title", "Untitled")
+                      desc = issue.get("description", "")
+                      file_ref = issue.get("file", "")
+                      line = issue.get("line")
+                      rec = issue.get("recommendation", "")
+                      refs = issue.get("references", [])
+
+                      entry = f"### [{sev}] {title}\n"
+                      if file_ref:
+                          entry += f"**File:** `{file_ref}`"
+                          if line:
+                              entry += f" (line {line})"
+                          entry += "\n"
+                      entry += f"\n{desc}\n"
+                      if rec:
+                          entry += f"\n**Recommendation:** {rec}\n"
+                      if refs:
+                          entry += f"\n**References:** {', '.join(refs)}\n"
+                      entry += "\n---\n"
+                      body_parts.append(entry)
+
+          body = "\n".join(body_parts)
+
+          # Determine priority: 1=Urgent, 2=High, 3=Medium, 4=Low
+          priority = 3
+          if int(critical) > 0:
+              priority = 1
+          elif int(high) > 0:
+              priority = 2
+
+          title = f"Security Check: {repo} — {critical} Critical, {high} High, {medium} Medium"
+
+          payload = json.dumps({
+              "query": "mutation($input: IssueCreateInput!) { issueCreate(input: $input) { success issue { id identifier url } } }",
+              "variables": {
+                  "input": {
+                      "teamId": os.environ["LINEAR_TEAM_ID"],
+                      "title": title,
+                      "description": body,
+                      "priority": priority
+                  }
+              }
+          })
+
+          req = urllib.request.Request(
+              "https://api.linear.app/graphql",
+              data=payload.encode(),
+              headers={
+                  "Content-Type": "application/json",
+                  "Authorization": os.environ["LINEAR_API_KEY"]
+              }
+          )
+          resp = urllib.request.urlopen(req)
+          result = json.loads(resp.read())
+
+          issue_data = result.get("data", {}).get("issueCreate", {}).get("issue", {})
+          issue_url = issue_data.get("url", "")
+          issue_id = issue_data.get("identifier", "")
+
+          print(f"Linear issue created: {issue_id} — {issue_url}")
+
+          with open(os.environ["GITHUB_OUTPUT"], "a") as out:
+              out.write(f"linear_url={issue_url}\n")
+              out.write(f"linear_id={issue_id}\n")
+          PYEOF
+        env:
+          critical: ${{ steps.report.outputs.critical }}
+          high: ${{ steps.report.outputs.high }}
+          medium: ${{ steps.report.outputs.medium }}
+
+      - name: Discord alert (issues found)
+        if: steps.report.outputs.has_issues == 'true'
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_SECURITY_WEBHOOK }}
+        run: |
+          python3 << 'PYEOF'
+          import json, os, urllib.request
+
+          repo = os.environ.get("GITHUB_REPOSITORY", "unknown")
+          run_url = f"{os.environ['GITHUB_SERVER_URL']}/{repo}/actions/runs/{os.environ['GITHUB_RUN_ID']}"
+          critical = int(os.environ.get("critical", "0"))
+          high = int(os.environ.get("high", "0"))
+          medium = int(os.environ.get("medium", "0"))
+          low = int(os.environ.get("low", "0"))
+          total = os.environ.get("total", "0")
+          risk_level = os.environ.get("risk_level", "unknown")
+          linear_url = os.environ.get("linear_url", "")
+
+          # Color based on severity
+          if critical > 0:
+              color = 15158332  # Red
+          elif high > 0:
+              color = 16744448  # Orange
+          else:
+              color = 16776960  # Yellow
+
+          fields = [
+              {"name": "Critical", "value": str(critical), "inline": True},
+              {"name": "High", "value": str(high), "inline": True},
+              {"name": "Medium", "value": str(medium), "inline": True},
+              {"name": "Low", "value": str(low), "inline": True},
+              {"name": "Total", "value": f"{total} findings", "inline": True},
+              {"name": "Risk Level", "value": risk_level.upper(), "inline": True},
+          ]
+
+          if linear_url:
+              fields.append({"name": "Linear Issue", "value": f"[Details & Fix-Plan]({linear_url})", "inline": False})
+
+          fields.append({"name": "Workflow", "value": f"[Run ansehen]({run_url})", "inline": False})
+
+          payload = json.dumps({
+              "content": "<@&1489735912819654826>",
+              "embeds": [{
+                  "title": f"Security-Check: {repo}",
+                  "description": "Sicherheitsprobleme gefunden!",
+                  "color": color,
+                  "fields": fields,
+                  "footer": {"text": "Weekly Security Check"}
+              }]
+          })
+
+          req = urllib.request.Request(
+              os.environ["DISCORD_WEBHOOK"],
+              data=payload.encode(),
+              headers={"Content-Type": "application/json"}
+          )
+          urllib.request.urlopen(req)
+          print("Discord alert sent.")
+          PYEOF
+        env:
+          critical: ${{ steps.report.outputs.critical }}
+          high: ${{ steps.report.outputs.high }}
+          medium: ${{ steps.report.outputs.medium }}
+          low: ${{ steps.report.outputs.low }}
+          total: ${{ steps.report.outputs.total }}
+          risk_level: ${{ steps.report.outputs.risk_level }}
+          linear_url: ${{ steps.report.outputs.linear_url }}
+
+      - name: Discord status (all clear)
+        if: steps.report.outputs.has_issues == 'false'
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_SECURITY_WEBHOOK }}
+        run: |
+          python3 << 'PYEOF'
+          import json, os, urllib.request
+
+          repo = os.environ.get("GITHUB_REPOSITORY", "unknown")
+
+          payload = json.dumps({
+              "embeds": [{
+                  "title": f"Security-Check: {repo}",
+                  "description": "Keine Sicherheitsprobleme gefunden.",
+                  "color": 5763719,
+                  "footer": {"text": "Weekly Security Check"}
+              }]
+          })
+
+          req = urllib.request.Request(
+              os.environ["DISCORD_WEBHOOK"],
+              data=payload.encode(),
+              headers={"Content-Type": "application/json"}
+          )
+          urllib.request.urlopen(req)
+          print("Discord all-clear sent.")
+          PYEOF
