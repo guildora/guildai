@@ -202,6 +202,7 @@ jobs:
 
       - name: Discord alert (issues found)
         if: steps.report.outputs.has_issues == 'true'
+        continue-on-error: true
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_SECURITY_WEBHOOK }}
           critical: ${{ steps.report.outputs.critical }}
@@ -258,17 +259,29 @@ jobs:
               }]
           })
 
+          webhook_url = os.environ["DISCORD_WEBHOOK"].strip()
+          print(f"Webhook URL length: {len(webhook_url)}, starts with: {webhook_url[:40]}...")
+
           req = urllib.request.Request(
-              os.environ["DISCORD_WEBHOOK"],
+              webhook_url,
               data=payload.encode(),
-              headers={"Content-Type": "application/json"}
+              headers={
+                  "Content-Type": "application/json",
+                  "User-Agent": "GitHub-Actions-Security-Check"
+              }
           )
-          urllib.request.urlopen(req)
-          print("Discord alert sent.")
+          try:
+              resp = urllib.request.urlopen(req)
+              print(f"Discord alert sent. Status: {resp.status}")
+          except urllib.error.HTTPError as e:
+              print(f"Discord error: {e.code} {e.reason}")
+              print(f"Response body: {e.read().decode()}")
+              raise
           PYEOF
 
       - name: Discord status (all clear)
         if: steps.report.outputs.has_issues == 'false'
+        continue-on-error: true
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_SECURITY_WEBHOOK }}
         run: |
@@ -286,11 +299,20 @@ jobs:
               }]
           })
 
+          webhook_url = os.environ["DISCORD_WEBHOOK"].strip()
           req = urllib.request.Request(
-              os.environ["DISCORD_WEBHOOK"],
+              webhook_url,
               data=payload.encode(),
-              headers={"Content-Type": "application/json"}
+              headers={
+                  "Content-Type": "application/json",
+                  "User-Agent": "GitHub-Actions-Security-Check"
+              }
           )
-          urllib.request.urlopen(req)
-          print("Discord all-clear sent.")
+          try:
+              resp = urllib.request.urlopen(req)
+              print(f"Discord all-clear sent. Status: {resp.status}")
+          except urllib.error.HTTPError as e:
+              print(f"Discord error: {e.code} {e.reason}")
+              print(f"Response body: {e.read().decode()}")
+              raise
           PYEOF
