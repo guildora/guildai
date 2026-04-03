@@ -107,6 +107,9 @@ jobs:
         env:
           LINEAR_API_KEY: ${{ secrets.LINEAR_API_KEY }}
           LINEAR_TEAM_ID: ${{ secrets.LINEAR_TEAM_ID }}
+          critical: ${{ steps.report.outputs.critical }}
+          high: ${{ steps.report.outputs.high }}
+          medium: ${{ steps.report.outputs.medium }}
         run: |
           python3 << 'PYEOF'
           import json, os, urllib.request
@@ -198,15 +201,18 @@ jobs:
               out.write(f"linear_url={issue_url}\n")
               out.write(f"linear_id={issue_id}\n")
           PYEOF
-        env:
-          critical: ${{ steps.report.outputs.critical }}
-          high: ${{ steps.report.outputs.high }}
-          medium: ${{ steps.report.outputs.medium }}
 
       - name: Discord alert (issues found)
         if: steps.report.outputs.has_issues == 'true'
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_SECURITY_WEBHOOK }}
+          critical: ${{ steps.report.outputs.critical }}
+          high: ${{ steps.report.outputs.high }}
+          medium: ${{ steps.report.outputs.medium }}
+          low: ${{ steps.report.outputs.low }}
+          total: ${{ steps.report.outputs.total }}
+          risk_level: ${{ steps.report.outputs.risk_level }}
+          linear_url: ${{ steps.report.outputs.linear_url }}
         run: |
           python3 << 'PYEOF'
           import json, os, urllib.request
@@ -262,14 +268,6 @@ jobs:
           urllib.request.urlopen(req)
           print("Discord alert sent.")
           PYEOF
-        env:
-          critical: ${{ steps.report.outputs.critical }}
-          high: ${{ steps.report.outputs.high }}
-          medium: ${{ steps.report.outputs.medium }}
-          low: ${{ steps.report.outputs.low }}
-          total: ${{ steps.report.outputs.total }}
-          risk_level: ${{ steps.report.outputs.risk_level }}
-          linear_url: ${{ steps.report.outputs.linear_url }}
 
       - name: Discord status (all clear)
         if: steps.report.outputs.has_issues == 'false'
