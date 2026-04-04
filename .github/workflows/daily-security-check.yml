@@ -1,8 +1,8 @@
-name: Weekly Security Check
+name: Daily Security Check
 
 on:
   schedule:
-    - cron: '20 4 * * 4' # Donnerstag 04:20 UTC (06:20 MESZ)
+    - cron: '20 4 * * *' # Täglich 04:20 UTC (06:20 MESZ)
   workflow_dispatch:
 
 permissions:
@@ -255,7 +255,7 @@ jobs:
                   "description": "Sicherheitsprobleme gefunden!",
                   "color": color,
                   "fields": fields,
-                  "footer": {"text": "Weekly Security Check"}
+                  "footer": {"text": "Daily Security Check"}
               }]
           })
 
@@ -279,40 +279,4 @@ jobs:
               raise
           PYEOF
 
-      - name: Discord status (all clear)
-        if: steps.report.outputs.has_issues == 'false'
-        continue-on-error: true
-        env:
-          DISCORD_WEBHOOK: ${{ secrets.DISCORD_SECURITY_WEBHOOK }}
-        run: |
-          python3 << 'PYEOF'
-          import json, os, urllib.request
 
-          repo = os.environ.get("GITHUB_REPOSITORY", "unknown")
-
-          payload = json.dumps({
-              "embeds": [{
-                  "title": f"Security-Check: {repo}",
-                  "description": "Keine Sicherheitsprobleme gefunden.",
-                  "color": 5763719,
-                  "footer": {"text": "Weekly Security Check"}
-              }]
-          })
-
-          webhook_url = os.environ["DISCORD_WEBHOOK"].strip()
-          req = urllib.request.Request(
-              webhook_url,
-              data=payload.encode(),
-              headers={
-                  "Content-Type": "application/json",
-                  "User-Agent": "GitHub-Actions-Security-Check"
-              }
-          )
-          try:
-              resp = urllib.request.urlopen(req)
-              print(f"Discord all-clear sent. Status: {resp.status}")
-          except urllib.error.HTTPError as e:
-              print(f"Discord error: {e.code} {e.reason}")
-              print(f"Response body: {e.read().decode()}")
-              raise
-          PYEOF
