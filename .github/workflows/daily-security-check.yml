@@ -171,6 +171,7 @@ jobs:
               "variables": {
                   "input": {
                       "teamId": os.environ["LINEAR_TEAM_ID"],
+                      "projectId": "f7f4e59c-e2c8-4418-a373-2f475ed90660",
                       "title": title,
                       "description": body,
                       "priority": priority
